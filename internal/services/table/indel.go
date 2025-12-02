@@ -9,9 +9,10 @@ package table
 
 import (
 	"fmt"
-	"gosheet/internal/services/ui"
 	"gosheet/internal/services/cell"
+	"gosheet/internal/services/ui"
 	"gosheet/internal/utils"
+	"maps"
 
 	"github.com/rivo/tview"
 )
@@ -19,7 +20,7 @@ import (
 var totalRows, totalCols int32
 
 // DELETE FUNCTIONS
-func eliminateRowCol(app *tview.Application, table *tview.Table) {
+func deleteRowCol(app *tview.Application, table *tview.Table) {
 	activeViewport := GetActiveViewport()
 	
 	if activeViewport == nil {
@@ -30,15 +31,15 @@ func eliminateRowCol(app *tview.Application, table *tview.Table) {
 	row, col := activeViewport.ToAbsolute(visualRow, visualCol)
 
 	if row == 0 && col > 0 {
-		eliminateCol(app, table, col)
+		deleteCol(app, table, col)
 	} else if col == 0 && row > 0 {
-		eliminateRow(app, table, row)
+		deleteRow(app, table, row)
 	} else {
 		ui.ShowWarningModal(app, table, "Select a column or a row before deleting it.")
 	}
 }
 
-func eliminateCol(app *tview.Application, table *tview.Table, col int32) {
+func deleteCol(app *tview.Application, table *tview.Table, col int32) {
 	activeData := GetActiveSheetData()
 	activeViewport := GetActiveViewport()
 	
@@ -59,25 +60,26 @@ func eliminateCol(app *tview.Application, table *tview.Table, col int32) {
 					return
 				}
 				
-				newData := make(map[[2]int]*cell.Cell)
-				for key, cellData := range activeData {
-					r, c := key[0], key[1]
-					if int32(c) < col {
-						newData[key] = cellData
-					} else if int32(c) > col {
-						newKey := [2]int{r, c - 1}
-						cellData.Column--
-						newData[newKey] = cellData
-					}
-				}
+				keysToDelete := make([][2]int, 0)
+        		keysToUpdate := make(map[[2]int]*cell.Cell)
+
+        		for key, cellData := range activeData {
+        		    r, c := key[0], key[1]
+        		    if int32(c) == col {
+        		        keysToDelete = append(keysToDelete, key)
+        		    } else if int32(c) > col {
+        		        cellData.Column--
+        		        keysToUpdate[[2]int{r, c - 1}] = cellData
+        		        keysToDelete = append(keysToDelete, key)
+        		    }
+        		}
+
+        		for _, key := range keysToDelete {
+        		    delete(activeData, key)
+        		}
+				maps.Copy(activeData, keysToUpdate)
 				
-				// CRITICAL: Update the actual sheet's data reference
-				sheet := globalWorkbook.GetActiveSheet()
-				if sheet != nil {
-					sheet.Data = newData
-				}
-				
-				RenderVisible(table, activeViewport, newData)
+				RenderVisible(table, activeViewport, activeData)
 				app.SetRoot(table, true).SetFocus(table)
 			} else {
 				app.SetRoot(table, true).SetFocus(table)
@@ -87,7 +89,7 @@ func eliminateCol(app *tview.Application, table *tview.Table, col int32) {
 	app.SetRoot(modal, true).SetFocus(modal)	
 }
 
-func eliminateRow(app *tview.Application, table *tview.Table, row int32) {
+func deleteRow(app *tview.Application, table *tview.Table, row int32) {
 	modal := tview.NewModal().
 		SetText(fmt.Sprintf("Do you wish to delete row %d?", row)).
 		AddButtons([]string{"Yes", "No"}).
@@ -101,25 +103,26 @@ func eliminateRow(app *tview.Application, table *tview.Table, row int32) {
 					return
 				}
 				
-				newData := make(map[[2]int]*cell.Cell)
-				for key, cellData := range activeData {
-					r, c := key[0], key[1]
-					if int32(r) < row {
-						newData[key] = cellData
-					} else if int32(r) > row {
-						newKey := [2]int{r - 1, c}
-						cellData.Row--
-						newData[newKey] = cellData
-					}
-				}
-				
-				// CRITICAL: Update the actual sheet's data reference
-				sheet := globalWorkbook.GetActiveSheet()
-				if sheet != nil {
-					sheet.Data = newData
-				}
-				
-				RenderVisible(table, activeViewport, newData)
+				keysToDelete := make([][2]int, 0)
+    			keysToUpdate := make(map[[2]int]*cell.Cell)
+        
+        		for key, cellData := range activeData {
+        		    r, c := key[0], key[1]
+        		    if int32(r) == row {
+        		        keysToDelete = append(keysToDelete, key)
+        		    } else if int32(r) > row {
+        		        cellData.Row--
+        		        keysToUpdate[[2]int{r - 1, c}] = cellData
+            		    keysToDelete = append(keysToDelete, key)
+            		}
+        		}
+        
+        		for _, key := range keysToDelete {
+        		    delete(activeData, key)
+        		}
+        		maps.Copy(activeData, keysToUpdate)	
+
+				RenderVisible(table, activeViewport, activeData)
 				app.SetRoot(table, true).SetFocus(table)
 			} else {
 				app.SetRoot(table, true).SetFocus(table)
@@ -164,25 +167,24 @@ func insertCol(app *tview.Application, table *tview.Table, col int32) {
 					return
 				}
 				
-				newData := make(map[[2]int]*cell.Cell)
-				for key, cellData := range activeData {
-					r, c := key[0], key[1]
-					if int32(c) < col {
-						newData[key] = cellData
-					} else {
-						newKey := [2]int{r, c + 1}
-						cellData.Column++
-						newData[newKey] = cellData
-					}
-				}
-				
-				// CRITICAL: Update the actual sheet's data reference
-				sheet := globalWorkbook.GetActiveSheet()
-				if sheet != nil {
-					sheet.Data = newData
-				}
-				
-				RenderVisible(table, activeViewport, newData)
+				keysToDelete := make([][2]int, 0)
+        		keysToUpdate := make(map[[2]int]*cell.Cell)
+
+        		for key, cellData := range activeData {
+        		    r, c := key[0], key[1]
+        		    if int32(c) >= col {
+        		        cellData.Column++
+        		        keysToUpdate[[2]int{r, c + 1}] = cellData
+        		        keysToDelete = append(keysToDelete, key)
+        		    }
+        		}
+
+        		for _, key := range keysToDelete {
+        		    delete(activeData, key)
+        		}
+        		maps.Copy(activeData, keysToUpdate)	
+
+				RenderVisible(table, activeViewport, activeData)
 				app.SetRoot(table, true).SetFocus(table)
 			} else {
 				app.SetRoot(table, true).SetFocus(table)
@@ -206,25 +208,24 @@ func insertRow(app *tview.Application, table *tview.Table, row int32) {
 					return
 				}
 				
-				newData := make(map[[2]int]*cell.Cell)
-				for key, cellData := range activeData {
-					r, c := key[0], key[1]
-					if int32(r) < row {
-						newData[key] = cellData
-					} else {
-						newKey := [2]int{r + 1, c}
-						cellData.Row++
-						newData[newKey] = cellData
-					}
-				}
+				keysToDelete := make([][2]int, 0)
+		        keysToUpdate := make(map[[2]int]*cell.Cell)
+
+        		for key, cellData := range activeData {
+        		    r, c := key[0], key[1]
+        		    if int32(r) >= row {
+    		            cellData.Row++
+		                keysToUpdate[[2]int{r + 1, c}] = cellData
+		                keysToDelete = append(keysToDelete, key)
+		            }
+        		}
+
+        		for _, key := range keysToDelete {
+        		    delete(activeData, key)
+        		}
+        		maps.Copy(activeData, keysToUpdate)	
 				
-				// CRITICAL: Update the actual sheet's data reference
-				sheet := globalWorkbook.GetActiveSheet()
-				if sheet != nil {
-					sheet.Data = newData
-				}
-				
-				RenderVisible(table, activeViewport, newData)
+				RenderVisible(table, activeViewport, activeData)
 				app.SetRoot(table, true).SetFocus(table)
 			} else {
 				app.SetRoot(table, true).SetFocus(table)

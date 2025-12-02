@@ -62,7 +62,9 @@ func RecordAction(action *Action) {
 	history.undoStack = append(history.undoStack, action)
 
 	if len(history.undoStack) > history.maxSize {
-		history.undoStack = history.undoStack[1:]
+		newStack := make([]*Action, history.maxSize)
+	    copy(newStack, history.undoStack[1:])
+	    history.undoStack = newStack
 	}
 
 	history.redoStack = nil
@@ -222,7 +224,7 @@ func Undo(table *tview.Table) bool {
 		}
 
 	case ActionInsertRow:
-		eliminateRow(nil, table, action.Row)
+		deleteRow(nil, table, action.Row)
 		RecalculateAllFormulas(table)
 
 	case ActionDeleteRow:
@@ -232,7 +234,7 @@ func Undo(table *tview.Table) bool {
 		}
 
 	case ActionInsertColumn:
-		eliminateCol(nil, table, action.Col)
+		deleteCol(nil, table, action.Col)
 		RecalculateAllFormulas(table)
 
 	case ActionDeleteColumn:
@@ -285,7 +287,7 @@ func Redo(table *tview.Table) bool {
 		RecalculateAllFormulas(table)
 
 	case ActionDeleteRow:
-		eliminateRow(nil, table, action.Row)
+		deleteRow(nil, table, action.Row)
 		RecalculateAllFormulas(table)
 
 	case ActionInsertColumn:
@@ -293,7 +295,7 @@ func Redo(table *tview.Table) bool {
 		RecalculateAllFormulas(table)
 
 	case ActionDeleteColumn:
-		eliminateCol(nil, table, action.Col)
+		deleteCol(nil, table, action.Col)
 		RecalculateAllFormulas(table)
 	}
 

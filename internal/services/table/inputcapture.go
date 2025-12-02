@@ -246,7 +246,7 @@ func InputCaptureService(app *tview.Application, table *tview.Table, vp *utils.V
 
 		// Alt + Minus → Delete row/col
 		case event.Rune() == '-' && event.Modifiers()&tcell.ModAlt != 0:
-			eliminateRowCol(app, table)
+			deleteRowCol(app, table)
 			MarkAsModified(table)
 			return nil
 
