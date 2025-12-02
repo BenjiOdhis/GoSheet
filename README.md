@@ -505,7 +505,6 @@ GoSheet was inspired by:
 
 - **Issues**: [GitHub Issues](https://github.com/drclcomputers/gosheet/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/drclcomputers/gosheet/discussions)
-- **Email**: support@gosheet.dev (if available)
 
 ---
 
