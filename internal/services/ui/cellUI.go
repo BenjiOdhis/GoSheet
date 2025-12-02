@@ -37,16 +37,30 @@ func getAlignIndex(align int8) int {
 }
 
 func getColorIndices(c *cell.Cell) (int, int) {
-	colorIndex, bgIndex := 10, 10 
+	colorIndex, bgIndex := -1, -1
 
 	for i, name := range utils.ColorOptionNames {
-		if c.Color == utils.ColorOptions[name] {
+		if name == "Custom..." {
+			continue
+		}
+		if colorIndex == -1 && c.Color == utils.ColorOptions[name] {
 			colorIndex = i
 		}
-		if c.BgColor == utils.ColorOptions[name] {
+		if bgIndex == -1 && c.BgColor == utils.ColorOptions[name] {
 			bgIndex = i
 		}
+		if colorIndex != -1 && bgIndex != -1 {
+			break
+		}
 	}
+
+	if colorIndex == -1 {
+		colorIndex = 0
+	}
+	if bgIndex == -1 {
+		bgIndex = 0
+	}
+
 	return colorIndex, bgIndex
 }
 
@@ -177,7 +191,7 @@ func EditCellDialog(app *tview.Application, table *tview.Table, row, column int3
         }
     })
 
-	dateTimeFormatDropdown := newDropdown("Date format", dateTimeFormats,
+	dateTimeFormatDropdown := newDropdown("Date Format: ", dateTimeFormats,
 		int32(getDateTypeFormat(*c.DateTimeFormat)),
 		func (opt string) {
 	        *c.DateTimeFormat = utils.DateTimeFormats[getDateTypeFormat(opt)]
@@ -321,13 +335,13 @@ func buildEditCellForm(app *tview.Application, table *tview.Table, c, oldCell *c
 
 	colorForm.AddDropDown("Background", utils.ColorOptionNames, bgColorIndex, func(option string, index int) {
 		if option == "Custom..." {
-			showCustomColorPicker(app, container, c, false, colorForm)
+			showCustomColorPicker(app, container, c, true, colorForm)
 			return
 		}
 		c.BgColor = utils.ColorOptions[option]
 	})
 	colorForm.AddButton("Custom BG Color", func() {
-		showCustomColorPicker(app, container, c, false, colorForm)
+		showCustomColorPicker(app, container, c, true, colorForm)
 	})
 	colorForm.SetBorder(true).SetTitle(" Colors ").SetTitleAlign(tview.AlignLeft)	
 

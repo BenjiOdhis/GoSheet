@@ -50,7 +50,7 @@ func SelectInTable(app *tview.Application, table *tview.Table, vp *utils.Viewpor
 						tvCell.SetBackgroundColor(cellData.BgColor.ToTCellColor())
 					}
 				} else {
-					tvCell.SetBackgroundColor(tcell.ColorBlack)
+					tvCell.SetBackgroundColor(utils.ColorOptions["Black"].ToTCellColor())
 				}
 			}
 		}

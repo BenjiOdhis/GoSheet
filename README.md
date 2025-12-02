@@ -13,6 +13,8 @@
 
 </div>
 
+![Alt Text](https://github.com/drclcomputers/gosheet/demo_imgs/demo.gif)
+
 ---
 
 ## 📋 Overview
