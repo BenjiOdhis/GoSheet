@@ -13,7 +13,7 @@
 
 </div>
 
-![Alt Text](https://github.com/drclcomputers/gosheet/demo_imgs/demo.gif)
+![Alt Text](https://github.com/drclcomputers/GoSheet/blob/main/demo_imgs/demo.gif)
 
 ---
 
