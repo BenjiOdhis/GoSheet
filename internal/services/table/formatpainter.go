@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"gosheet/internal/services/cell"
 	"gosheet/internal/utils"
+	"strconv"
+	"strings"
 
 	"github.com/rivo/tview"
 )
@@ -44,6 +46,10 @@ func robFormatPainter(table *tview.Table) {
 			ThousandsSeparator:  cellData.ThousandsSeparator,
 			DecimalSeparator:    cellData.DecimalSeparator,
 			FinancialSign:       cellData.FinancialSign,
+			Valrule: 			 cellData.Valrule,
+			Valrulemsg: 		 cellData.Valrulemsg,
+			MaxWidth: 			 cellData.MaxWidth,
+			MinWidth: 			 cellData.MinWidth,
 		}
 	}
 }
@@ -129,6 +135,23 @@ func performActualFormatPaste(table *tview.Table, sourceFormat *cell.Cell, r1, c
 			targetCell.Valrulemsg = sourceFormat.Valrulemsg
 			targetCell.MaxWidth = sourceFormat.MaxWidth
 			targetCell.MinWidth = sourceFormat.MinWidth
+
+			if targetCell.Type != nil && (*targetCell.Type == "number" || *targetCell.Type == "financial") {
+				if targetCell.RawValue != nil {
+					normalized := strings.ReplaceAll(*targetCell.RawValue, string(targetCell.ThousandsSeparator), "")
+					normalized = strings.TrimPrefix(normalized, string(targetCell.FinancialSign))
+					
+					if val, err := strconv.ParseFloat(normalized, 64); err == nil {
+						formatted := utils.FormatWithCommas(val, targetCell.ThousandsSeparator, 
+							targetCell.DecimalSeparator, targetCell.DecimalPoints, targetCell.FinancialSign)
+						
+						if *targetCell.Type == "financial" {
+							formatted = fmt.Sprintf("%c%s", targetCell.FinancialSign, formatted)
+						}
+						*targetCell.Display = formatted
+					}
+				}
+			}
 			
 			if activeViewport.IsVisible(r, c) {
 				visualR, visualC := activeViewport.ToRelative(r, c)

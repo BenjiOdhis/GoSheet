@@ -25,6 +25,17 @@ func InputCaptureService(app *tview.Application, table *tview.Table, vp *utils.V
 			return event
 		}
 
+		if event.Key() == tcell.KeyCtrlC {
+		    modal := tview.NewModal().
+		        SetText("Ctrl+C detected. Exiting...\nUnsaved edits will be lost.").
+		        AddButtons([]string{"OK"}).
+		        SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+		            app.Stop()
+		        })
+		    app.SetRoot(modal, true).SetFocus(modal)
+		    return nil
+		}
+
 		activeData := GetActiveSheetData()
 		activeViewport := GetActiveViewport()
 		

@@ -493,8 +493,10 @@ func performSave(app *tview.Application, table *tview.Table, filename string, fo
 		ShowErrorModal(app, table, fmt.Sprintf("Failed to save file:\n%s", err.Error()))
 		return
 	}
-	
-	AddToRecentFiles(filename)
+
+	if format.Extension == ".json" || format.Extension == ".gsheet" || format.Extension == ".txt" {
+		AddToRecentFiles(filename)
+	}
 	
 	message := fmt.Sprintf("File saved successfully!\n\nLocation:\n%s", filename)
 	modal := tview.NewModal().

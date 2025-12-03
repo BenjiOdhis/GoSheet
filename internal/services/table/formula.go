@@ -15,11 +15,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Knetic/govaluate"
+	"github.com/expr-lang/expr"
 	"github.com/rivo/tview"
 )
 
 var cellRefRegex = regexp.MustCompile(`\b([A-Z]+)(\d+)\b`)
+var rangeRegex = regexp.MustCompile(`\b([A-Z]+)(\d+):([A-Z]+)(\d+)\b`)
 
 // Token types for formula parsing
 type TokenType int
@@ -34,6 +35,75 @@ type Token struct {
 	Type     TokenType
 	Value    string
 	Original string
+}
+
+// ExpandRange converts a range like "A1:B4" into individual cell references
+func ExpandRange(rangeStr string) ([]string, error) {
+	matches := rangeRegex.FindStringSubmatch(strings.ToUpper(rangeStr))
+	if matches == nil {
+		return nil, fmt.Errorf("invalid range format: %s", rangeStr)
+	}
+
+	startCol := matches[1]
+	startRow := matches[2]
+	endCol := matches[3]
+	endRow := matches[4]
+
+	startRowNum, err := strconv.Atoi(startRow)
+	if err != nil {
+		return nil, fmt.Errorf("invalid start row: %s", startRow)
+	}
+
+	endRowNum, err := strconv.Atoi(endRow)
+	if err != nil {
+		return nil, fmt.Errorf("invalid end row: %s", endRow)
+	}
+
+	startColNum := utils.ColumnNumber(startCol)
+	endColNum := utils.ColumnNumber(endCol)
+
+	if startRowNum > endRowNum {
+		startRowNum, endRowNum = endRowNum, startRowNum
+	}
+	if startColNum > endColNum {
+		startColNum, endColNum = endColNum, startColNum
+	}
+
+	var cells []string
+	for r := startRowNum; r <= endRowNum; r++ {
+		for c := startColNum; c <= endColNum; c++ {
+			cellRef := fmt.Sprintf("%s%d", utils.ColumnName(int32(c)), r)
+			cells = append(cells, cellRef)
+		}
+	}
+
+	return cells, nil
+}
+
+// ExpandRangesInFormula replaces all ranges with comma-separated cell lists
+func ExpandRangesInFormula(formula string) (string, error) {
+	matches := rangeRegex.FindAllStringSubmatchIndex(formula, -1)
+	if matches == nil {
+		return formula, nil
+	}
+
+	result := formula
+	for i := len(matches) - 1; i >= 0; i-- {
+		match := matches[i]
+		rangeStart := match[0]
+		rangeEnd := match[1]
+		rangeStr := formula[rangeStart:rangeEnd]
+
+		cells, err := ExpandRange(rangeStr)
+		if err != nil {
+			return "", err
+		}
+
+		cellList := strings.Join(cells, ", ")
+		result = result[:rangeStart] + cellList + result[rangeEnd:]
+	}
+
+	return result, nil
 }
 
 // Turns a formula into tokens
@@ -110,10 +180,15 @@ func ParseFormulaTokens(formula string) []Token {
 
 // Returns an array of all of the cells used in the formula
 func ParseCellReferences(formula string) []*string {
-	matches := cellRefRegex.FindAllString(formula, -1)
+	expandedFormula, err := ExpandRangesInFormula(formula)
+	if err != nil {
+		expandedFormula = formula
+	}
+
+	matches := cellRefRegex.FindAllString(expandedFormula, -1)
 	seen := make(map[string]bool)
 	var refs []*string
-	
+
 	for _, match := range matches {
 		if !seen[match] {
 			matchCopy := match
@@ -121,7 +196,7 @@ func ParseCellReferences(formula string) []*string {
 			seen[match] = true
 		}
 	}
-	
+
 	return refs
 }
 
@@ -204,7 +279,7 @@ func hasCircularDependency(table *tview.Table, c *cell.Cell, visited map[string]
 		}
 	}
 	
-	//delete(visited, cellRef)
+	delete(visited, cellRef)
 	return false
 }
 
@@ -227,47 +302,52 @@ func checkCircularDependencyForNewFormula(table *tview.Table, c *cell.Cell, newF
 
 // Parses formula into a format usable by govaluate
 func BuildEvaluableFormula(table *tview.Table, formula string, parameters map[string]any) (string, error) {
-	tokens := ParseFormulaTokens(formula)
+	expandedFormula, err := ExpandRangesInFormula(formula)
+	if err != nil {
+		return "", fmt.Errorf("range expansion error: %v", err)
+	}
+
+	tokens := ParseFormulaTokens(expandedFormula)
 	var result strings.Builder
-	
+
 	for _, token := range tokens {
 		switch token.Type {
 		case TokenStringLiteral:
 			paramName := fmt.Sprintf("STR_LITERAL_%d", len(parameters))
 			parameters[paramName] = token.Value
 			result.WriteString(paramName)
-			
+
 		case TokenCellRef:
 			paramName := "CELL_" + token.Value
-			
+
 			c, err := GetCellByRef(table, token.Value)
 			if err != nil {
 				return "", err
 			}
-			
+
 			if c.IsFormula() && !c.HasFlag(cell.FlagEvaluated) {
 				if err := EvaluateCell(table, c); err != nil {
 					return "", err
 				}
 			}
-			
+
 			val := strings.TrimSpace(*c.Display)
 			val = strings.ReplaceAll(val, string(c.ThousandsSeparator), "")
 			val = strings.TrimPrefix(val, string(c.FinancialSign))
-			
+
 			if num, err := strconv.ParseFloat(val, 64); err == nil {
 				parameters[paramName] = num
 			} else {
 				parameters[paramName] = strings.TrimSpace(*c.Display)
 			}
-			
+
 			result.WriteString(paramName)
-			
+
 		default:
 			result.WriteString(token.Value)
 		}
 	}
-	
+
 	return result.String(), nil
 }
 
@@ -276,29 +356,36 @@ func EvaluateCell(table *tview.Table, c *cell.Cell) error {
 	if !c.IsFormula() {
 		return nil
 	}
-	
+
 	if c.RawValue == nil {
 		return fmt.Errorf("cell has nil RawValue")
 	}
-	
+
 	if c.HasFlag(cell.FlagEvaluated) {
-		return nil 
-	}	
-	
+		return nil
+	}
+
 	formula := c.GetFormulaExpression()
-	formulaUpper := strings.ToUpper(formula) 
-	
-	if err := checkCircularDependencyForNewFormula(table, c, formulaUpper); err != nil {
+	formulaUpper := strings.ToUpper(formula)
+
+	expandedFormula, err := ExpandRangesInFormula(formulaUpper)
+	if err != nil {
+		*c.Display = "#REF!"
+		c.SetFlag(cell.FlagEvaluated)
+		return err
+	}
+
+	if err := checkCircularDependencyForNewFormula(table, c, expandedFormula); err != nil {
 		*c.Display = "#CIRC!"
 		c.SetFlag(cell.FlagEvaluated)
 		return err
 	}
-	
+
 	clearOldDependencies(table, c)
-	
-	refs := ParseCellReferences(formulaUpper)
+
+	refs := ParseCellReferences(expandedFormula)
 	c.DependsOn = refs
-	
+
 	cellRef := utils.FormatCellRef(c.Row, c.Column)
 	for _, ref := range refs {
 		depCell, err := GetCellByRef(table, *ref)
@@ -307,12 +394,12 @@ func EvaluateCell(table *tview.Table, c *cell.Cell) error {
 			c.SetFlag(cell.FlagEvaluated)
 			return err
 		}
-		
+
 		if !contains(depCell.Dependents, cellRef) {
 			depCell.Dependents = append(depCell.Dependents, &cellRef)
 		}
 	}
-	
+
 	parameters := make(map[string]any)
 	evaluableFormula, err := BuildEvaluableFormula(table, formula, parameters)
 	if err != nil {
@@ -320,23 +407,23 @@ func EvaluateCell(table *tview.Table, c *cell.Cell) error {
 		c.SetFlag(cell.FlagEvaluated)
 		return err
 	}
-	
+
 	result, err := evaluateExpression(evaluableFormula, parameters)
 	if err != nil {
-    	errMsg := err.Error()
-    	if strings.Contains(errMsg, "requires") {
-    	    *c.Display = "#ARGS!"
-    	} else if strings.Contains(errMsg, "division by zero") {
-    	    *c.Display = "#DIV/0!"
-    	} else if strings.Contains(errMsg, "invalid") {
-    	    *c.Display = "#VALUE!"
-	    } else {
-	        *c.Display = "#ERROR!"
-	    }
-	c.SetFlag(cell.FlagEvaluated)
-    	return err
-	}	
-	
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "requires") {
+			*c.Display = "#ARGS!"
+		} else if strings.Contains(errMsg, "division by zero") {
+			*c.Display = "#DIV/0!"
+		} else if strings.Contains(errMsg, "invalid") {
+			*c.Display = "#VALUE!"
+		} else {
+			*c.Display = "#ERROR!"
+		}
+		c.SetFlag(cell.FlagEvaluated)
+		return err
+	}
+
 	switch v := result.(type) {
 	case float64:
 		if c.Type == nil || *c.Type == "string" {
@@ -380,10 +467,10 @@ func EvaluateCell(table *tview.Table, c *cell.Cell) error {
 		*c.Type = "string"
 		*c.Display = fmt.Sprintf("%v", result)
 	}
-	
+
 	c.SetFlag(cell.FlagEvaluated)
 	c.SetFlag(cell.FlagFormula)
-	
+
 	return nil
 }
 
@@ -402,17 +489,28 @@ func clearOldDependencies(table *tview.Table, c *cell.Cell) {
 }
 
 // Uses govaluate to return a result of the formula
-func evaluateExpression(formula string, parameters map[string]any) (any, error) {
-	expr, err := govaluate.NewEvaluableExpressionWithFunctions(formula, utils.GovalFuncs())
-	if err != nil {
-		return nil, err
+func evaluateExpression(formula string, env map[string]any) (any, error) {
+	functions := utils.GovalFuncs()
+	
+	options := []expr.Option{
+		expr.Env(env),
+		expr.AllowUndefinedVariables(),
 	}
 	
-	result, err := expr.Evaluate(parameters)
-	if err != nil {
-		return nil, err
+	for name, fn := range functions {
+		options = append(options, expr.Function(name, fn))
 	}
-	
+
+	program, err := expr.Compile(formula, options...)
+	if err != nil {
+		return nil, fmt.Errorf("compile error: %v", err)
+	}
+
+	result, err := expr.Run(program, env)
+	if err != nil {
+		return nil, fmt.Errorf("runtime error: %v", err)
+	}
+
 	return result, nil
 }
 

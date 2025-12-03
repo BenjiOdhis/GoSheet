@@ -111,7 +111,7 @@ func OpenWorkbook(filename string) (*WorkbookResult, error) {
 
 // openLegacyFormat handles old single-sheet format
 func openLegacyFormat(filename string) (*WorkbookResult, error) {
-	cells, rows, cols, err := OpenTable(filename)
+	cells, err := OpenTable(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +121,6 @@ func openLegacyFormat(filename string) (*WorkbookResult, error) {
 			{
 				Name:  "Workbook1",
 				Cells: cells,
-				Rows:  rows,
-				Cols:  cols,
 			},
 		},
 		ActiveSheet: 0,
@@ -177,18 +175,18 @@ func processCellData(cellDataMap map[string]*CellData) []*cell.Cell {
 }
 
 // Legacy OpenTable function for backward compatibility - returns only first sheet
-func OpenTable(filename string) ([]*cell.Cell, int32, int32, error) {
+func OpenTable(filename string) ([]*cell.Cell, error) {
 	result, err := OpenWorkbook(filename)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, err
 	}
 
 	if len(result.Sheets) == 0 {
-		return nil, 0, 0, fmt.Errorf("no sheets found in workbook")
+		return nil, fmt.Errorf("no sheets found in workbook")
 	}
 
 	firstSheet := result.Sheets[0]
-	return firstSheet.Cells, firstSheet.Rows, firstSheet.Cols, nil
+	return firstSheet.Cells, nil
 }
 
 // openTxtFile opens a tab-delimited text file and converts it to cells

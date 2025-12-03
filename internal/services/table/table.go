@@ -23,7 +23,7 @@ import (
 var globalWorkbook *Workbook
 
 // Creates an empty tview table
-func CreateTable(rows, columns int32, title string) *tview.Table {
+func CreateTable(title string) *tview.Table {
     table := tview.NewTable().
         SetBorders(false).
         SetFixed(1, 1).
@@ -38,10 +38,9 @@ func CreateTable(rows, columns int32, title string) *tview.Table {
 
 // OpenTable loads a table from a file and returns a tview.Table
 func OpenTable(app *tview.Application, filename string) *tview.Table {
-	cellSlice, rows, columns, err := file.OpenTable(filename)
+	cellSlice, err := file.OpenTable(filename)
 
 	if err != nil {
-		fmt.Println("Error loading file!")
 		return nil
 	}
 
@@ -59,7 +58,7 @@ func OpenTable(app *tview.Application, filename string) *tview.Table {
 		sheet.Data[key] = c
 	}
 
-	table := CreateTable(rows, columns, filename)
+	table := CreateTable(filename)
 
 	RenderVisible(table, sheet.Viewport, sheet.Data)
 	table = SelectInTable(app, table, sheet.Viewport, sheet.Data)
@@ -68,12 +67,12 @@ func OpenTable(app *tview.Application, filename string) *tview.Table {
 }
 
 // Makes a new table/Workbook
-func NewTable(app *tview.Application, rows, cols int32) *tview.Table {
+func NewTable(app *tview.Application) *tview.Table {
 	globalWorkbook = NewWorkbook()
 	globalWorkbook.CurrentFile = ""
 	globalWorkbook.HasChanges = false
 	
-	table := CreateTable(rows, cols, "Untitled")
+	table := CreateTable("Untitled")
 	
 	sheet := globalWorkbook.GetActiveSheet()
 	RenderVisible(table, sheet.Viewport, sheet.Data)

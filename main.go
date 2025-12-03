@@ -29,16 +29,7 @@ func main() {
 	utils.UpdateNrCellsOnScrn()
 
 	app := tview.NewApplication()
-
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyCtrlC {
-			app.Stop()
-			fmt.Println("\nCtrl+C detected. Exiting gracefully...\nUnsaved edits may be lost.")
-			return nil
-		}
-		return event
-	})
-
+	
 	defer func() {
 	    if r := recover(); r != nil {
 	        fmt.Fprintf(os.Stderr, "Application crashed: %v\n", r)
@@ -46,11 +37,29 @@ func main() {
 	        os.Exit(1)
 	    }
 	}()
+
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	    if event.Key() == tcell.KeyCtrlC {
+	        modal := tview.NewModal().
+	            SetText("Ctrl+C detected. Exiting...\nUnsaved edits will be lost.").
+	            AddButtons([]string{"OK"}).
+	            SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+	                app.Stop()
+	            })
+	        app.SetRoot(modal, true).SetFocus(modal)
+	        return nil
+	    }
+	    return event
+	})
 	
 	var filename string
 
-	flag.StringVar(&filename, "file", "", "Path to .gsheet or .json file to open")
+	flag.StringVar(&filename, "file", "", "Path to .gsheet/.json/.txt file to open")
 	flag.Parse()
+
+	if filename == "" && len(flag.Args()) > 0 {
+	    filename = flag.Args()[0]
+	}
 
 	var t *tview.Table
 	if filename != "" {
@@ -64,14 +73,15 @@ func main() {
     	}
 
 		if filename == "THERE_IS_NO_FILE_SELECTED" {
-			t = table.NewTable(app, 1000, 702)
+			t = table.NewTable(app)
 		} else {
 			ui.AddToRecentFiles(filename)
 			t = table.OpenTable(app, filename)
 		}
     }
 
-	t.Select(1, 1)
+
+	if t != nil { t.Select(1, 1) } else { return }
 
 	app.SetRoot(t, true).SetFocus(t)
 
@@ -79,7 +89,7 @@ func main() {
 		panic(err)
 	}
 
-	//fmt.Println(utils.TOBEPRINTED)
+	if utils.TOBEPRINTED != nil{ fmt.Println(utils.TOBEPRINTED) }
 
 	/*
     // Print memory stats

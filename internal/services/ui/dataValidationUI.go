@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Knetic/govaluate"
+	"github.com/expr-lang/expr"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -200,10 +200,30 @@ func ValidateValidationRule(ruleText string, cellData *cell.Cell) bool {
 
 	testRule := strings.ReplaceAll(upperRule, "THIS", "5")
 
-	_, err := govaluate.NewEvaluableExpressionWithFunctions(testRule, utils.GovalFuncs())
-	if err != nil {
-		return false
+	functions := utils.GovalFuncs()
+
+	env := make(map[string]any)
+	for name, fn := range functions {
+		env[name] = fn
 	}
+
+	options := []expr.Option{
+		expr.AllowUndefinedVariables(),
+	}
+	
+	for name, fn := range functions {
+		options = append(options, expr.Function(name, fn))
+	}
+
+	program, err := expr.Compile(testRule, options...)
+	if err != nil {
+		return false 
+	}
+
+	_, err = expr.Run(program, env)
+	if err != nil {
+		return false 
+	}	
 
 	return true
 }
@@ -301,15 +321,26 @@ func CheckValidationRule(cellData *cell.Cell, newValue string) (bool, string) {
 
 	evaluableRule := strings.ReplaceAll(upperRule, "THIS", replacementValue)
 
-	expr, err := govaluate.NewEvaluableExpressionWithFunctions(evaluableRule, utils.GovalFuncs())
+	functions := utils.GovalFuncs()
+
+	env := make(map[string]any)
+	for name, fn := range functions {
+		env[name] = fn
+	}
+
+	options := []expr.Option{
+		expr.AllowUndefinedVariables(),
+	}
+
+	program, err := expr.Compile(evaluableRule, options...)
 	if err != nil {
 		return false, fmt.Sprintf("Invalid validation rule: %s", err.Error())
 	}
 
-	result, err := expr.Evaluate(nil)
+	result, err := expr.Run(program, env)
 	if err != nil {
-		return false, fmt.Sprintf("Validation error: %s", err.Error())
-	}
+		return false, "Could not compile validation rule"
+	}	
 
 	isValid, ok := result.(bool)
 	if !ok {

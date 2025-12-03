@@ -248,6 +248,24 @@ $= CONCAT(UPPER(A1), " - ", LOWER(B1))
 
 # Complex formulas
 $= IF(SUM(A1, A2) > 100, MAX(B1, B2), MIN(C1, C2))
+
+# Cell ranges
+$=SUM(A1:A10)           // Single column range
+$=SUM(A1:C1)            // Single row range
+$=SUM(A1:C10)           // Multi-cell range
+$=AVG(B2:B20)           // Works with any function
+$=MAX(A1:A5, C1:C5)     // Multiple ranges
+$=SUM(A1:A10) + AVG(B1:B10)  // Ranges in expressions
+
+Cell A1: 10
+Cell A2: 20
+Cell A3: 30
+Cell B1: $=SUM(A1:A3)   → Result: 60
+
+Cell C1: 5
+Cell C2: 15
+Cell C3: 25
+Cell D1: $=AVG(A1:A3, C1:C3)  → Result: 17.5
 ```
 
 ---
@@ -399,7 +417,7 @@ Contributions are welcome! Here's how you can help:
 ### Reporting Issues
 
 1. Check existing issues first
-2. Include GoSheet version (`./gosheet --version`)
+2. Include GoSheet version (obtainable from the start menu)
 3. Provide steps to reproduce
 4. Include terminal info (OS, terminal emulator)
 
@@ -454,7 +472,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 - [tview](https://github.com/rivo/tview) - Terminal UI framework
 - [tcell](https://github.com/gdamore/tcell) - Terminal handling
-- [govaluate](https://github.com/Knetic/govaluate) - Expression evaluation
+- [expr](https://github.com/expr-lang/expr) - Expression evaluation
 - [golang.org/x/term](https://golang.org/x/term) - Terminal utilities
 - [golang.org/x/text](https://golang.org/x/text) - Text processing
 
@@ -480,21 +498,17 @@ GoSheet was inspired by:
 
 ## 🗺️ Roadmap
 
-### Planned Features
-
 - [ ] Excel file format support (.xlsx)
 - [ ] Charts and graphs
 - [ ] Conditional formatting
 - [ ] Pivot tables
 - [ ] Macro recording
 - [ ] Plugin system
-- [ ] Cloud sync
-- [ ] Collaborative editing
-- [ ] Mobile terminal support
 - [ ] More export formats (PDF, ODS)
-
-### In Progress
-
+- [ ] Autobackup (auto save file to %APPDATA%/.gsheet)
+- [ ] Templates
+- [ ] Printing
+- [ ] Data protection
 - [x] Multi-sheet workbooks
 - [x] Data validation
 - [x] Advanced formula engine
