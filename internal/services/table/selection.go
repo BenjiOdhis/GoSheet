@@ -10,7 +10,7 @@ package table
 import (
 	"fmt"
 	"gosheet/internal/services/cell"
-	"gosheet/internal/services/ui/cell"
+	"gosheet/internal/services/ui/cellui"
 	"gosheet/internal/utils"
 
 	"github.com/gdamore/tcell/v2"

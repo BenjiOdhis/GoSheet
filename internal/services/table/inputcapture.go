@@ -207,12 +207,12 @@ func InputCaptureService(app *tview.Application, table *tview.Table, vp *utils.V
 
 		// Alt + R → Copy cell format
 		case (event.Rune() == 'r' || event.Rune() == 'R') && event.Modifiers()&tcell.ModAlt != 0:
-			robFormatPainter(table)
+			robCopyCellFormat(table)
 			return nil
 
 		// Alt + I → Paste cell format
 		case (event.Rune() == 'i' || event.Rune() == 'I') && event.Modifiers()&tcell.ModAlt != 0:
-			imitateFormatPainter(app, table, visualRow, visualCol)
+			imitatePasteCellFormat(app, table, visualRow, visualCol)
 			MarkAsModified(table)
 			return nil
 

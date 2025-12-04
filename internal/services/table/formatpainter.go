@@ -20,7 +20,7 @@ import (
 var formatSourceCell *cell.Cell
 
 // Copy the cell style to the clipboard
-func robFormatPainter(table *tview.Table) {
+func robCopyCellFormat(table *tview.Table) {
 	activeData := GetActiveSheetData()
 	activeViewport := GetActiveViewport()
 	
@@ -55,7 +55,7 @@ func robFormatPainter(table *tview.Table) {
 }
 
 // Paste clipboard style to selected cell/s
-func imitateFormatPainter(app *tview.Application, table *tview.Table, visualTargetRow, visualTargetCol int32) {
+func imitatePasteCellFormat(app *tview.Application, table *tview.Table, visualTargetRow, visualTargetCol int32) {
 	activeData := GetActiveSheetData()
 	activeViewport := GetActiveViewport()
 	
