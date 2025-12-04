@@ -5,7 +5,7 @@
 
 // model.go provides data models for saving and loading spreadsheet data with workbook support.
 
-package file
+package fileop
 
 import (
 	"gosheet/internal/services/cell"

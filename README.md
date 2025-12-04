@@ -100,6 +100,8 @@ go build -o gosheet
 
 ### Basic Navigation
 
+### Note: For MacOS users, activating 'Use Option as Meta Key' is mandatory for Alt commands to work. Here is a link "https://superuser.com/questions/1038947/using-the-option-key-properly-on-mac-terminal" for more info.
+
 | Key Combination | Action |
 |----------------|--------|
 | **Arrow Keys** | Navigate cells |
@@ -389,11 +391,17 @@ CONTAINS(THIS, "@") && CONTAINS(THIS, ".")
 gosheet/
 ├── internal/
 │   ├── services/
-│   │   ├── cell/           # Cell data structures
-│   │   ├── file/           # File I/O operations
-│   │   ├── table/          # Table management
-│   │   └── ui/             # User interface
-│   └── utils/              # Utility functions
+│   │   ├── cell/               # Cell data structures
+│   │   ├── fileop/             # File I/O operations
+│   │   ├── table/              # Table management
+│   │   └── ui/                 # User interface
+│   │       ├── cell/              # Cell UI
+│   │       ├── datavalidation/    # Data Validation logic and dialogs
+│   │       ├── file/              # Start Menu, file open/save dialogs
+│   │       ├── navigation/        # Find, Replace dialogs
+│   │       └── sheetmanager/      # Sheet Manager UI
+│   └── utils/                  # Utility functions
+│       └── evaluatefuncs          # Excel-like custom functions
 ├── go.mod
 ├── go.sum
 ├── LICENSE.md

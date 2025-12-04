@@ -8,8 +8,10 @@
 package table
 
 import (
-	"gosheet/internal/services/ui"
 	"gosheet/internal/services/cell"
+	"gosheet/internal/services/ui"
+	"gosheet/internal/services/ui/file"
+	"gosheet/internal/services/ui/navigation"
 	"gosheet/internal/utils"
 
 	"github.com/gdamore/tcell/v2"
@@ -174,28 +176,28 @@ func InputCaptureService(app *tview.Application, table *tview.Table, vp *utils.V
 
 		// Alt + G → Go to cell
 		case (event.Rune() == 'g' || event.Rune() == 'G') && event.Modifiers()&tcell.ModAlt != 0:
-			ui.GoToCellModal(app, table, activeData, activeViewport, RenderVisible)
+			navigation.GoToCellModal(app, table, activeData, activeViewport, RenderVisible)
 			return nil
 
 		// Alt + F → Find
 		case (event.Rune() == 'f' || event.Rune() == 'F') && event.Modifiers()&tcell.ModAlt != 0:
-			ui.FindDialog(app, table, activeData, activeViewport, RenderVisible)
+			navigation.FindDialog(app, table, activeData, activeViewport, RenderVisible)
 			return nil
 
 		// Alt + H → Replace
 		case (event.Rune() == 'h' || event.Rune() == 'H') && event.Modifiers()&tcell.ModAlt != 0:
-			ui.ReplaceDialog(app, table, activeData, activeViewport, RenderVisible)
+			navigation.ReplaceDialog(app, table, activeData, activeViewport, RenderVisible)
 			MarkAsModified(table)
 			return nil
 
 		// F4 → Find Next
 		case event.Key() == tcell.KeyF4:
-			ui.FindNextQuick(table, activeData, activeViewport, RenderVisible)
+			navigation.FindNextQuick(table, activeData, activeViewport, RenderVisible)
 			return nil
 
 		// F3 → Find Previous
 		case event.Key() == tcell.KeyF3:
-			ui.FindPreviousQuick(table, activeData, activeViewport, RenderVisible)
+			navigation.FindPreviousQuick(table, activeData, activeViewport, RenderVisible)
 			return nil
 			
 		// ALT + C → Copy
@@ -306,7 +308,7 @@ func InputCaptureService(app *tview.Application, table *tview.Table, vp *utils.V
 
 		// ESCAPE - Show Save Dialog
 		case event.Key() == tcell.KeyEscape || ((event.Rune() == 's' || event.Rune() == 'S') && event.Modifiers()&tcell.ModAlt != 0):
-			ui.ShowUnifiedFileDialog(app, table, "save", activeData, table, SetCurrentFilename, MarkAsSaved, HasUnsavedChanges, GetCurrentFilename())
+			file.ShowUnifiedFileDialog(app, table, "save", activeData, table, SetCurrentFilename, MarkAsSaved, HasUnsavedChanges, GetCurrentFilename())
 			return nil
 			
 		default:

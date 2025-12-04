@@ -9,20 +9,20 @@ package table
 
 import (
 	"fmt"
-	"gosheet/internal/services/ui"
+	"gosheet/internal/services/ui/sheetmanager"
 
 	"github.com/rivo/tview"
 )
 
 // GetSheets returns information about all sheets
-func GetSheets() []ui.SheetInfo {
+func GetSheets() []sheetmanager.SheetInfo {
 	if globalWorkbook == nil {
-		return []ui.SheetInfo{}
+		return []sheetmanager.SheetInfo{}
 	}
 
-	sheets := make([]ui.SheetInfo, len(globalWorkbook.Sheets))
+	sheets := make([]sheetmanager.SheetInfo, len(globalWorkbook.Sheets))
 	for i, sheet := range globalWorkbook.Sheets {
-		sheets[i] = ui.SheetInfo{
+		sheets[i] = sheetmanager.SheetInfo{
 			Name:      sheet.Name,
 			CellCount: len(sheet.Data),
 			IsActive:  i == globalWorkbook.ActiveSheet,
@@ -32,9 +32,9 @@ func GetSheets() []ui.SheetInfo {
 }
 
 // GetWorkbookInfo returns information about the workbook
-func GetWorkbookInfo() ui.WorkbookInfo {
+func GetWorkbookInfo() sheetmanager.WorkbookInfo {
 	if globalWorkbook == nil {
-		return ui.WorkbookInfo{}
+		return sheetmanager.WorkbookInfo{}
 	}
 
 	totalCells := 0
@@ -47,7 +47,7 @@ func GetWorkbookInfo() ui.WorkbookInfo {
 		activeSheetName = activeSheet.Name
 	}
 
-	return ui.WorkbookInfo{
+	return sheetmanager.WorkbookInfo{
 		TotalSheets: len(globalWorkbook.Sheets),
 		ActiveSheet: activeSheetName,
 		TotalCells:  totalCells,
@@ -219,9 +219,9 @@ func RenderActiveSheetView(table *tview.Table) {
 	}
 }
 
-// GetSheetManagerCallbacks returns callbacks for the sheet manager UI
-func GetSheetManagerCallbacks(table *tview.Table) ui.SheetManagerCallbacks {
-	return ui.SheetManagerCallbacks{
+// GetSheetManagerCallbacks returns callbacks for the sheet manager sheetmanager
+func GetSheetManagerCallbacks(table *tview.Table) sheetmanager.SheetManagerCallbacks {
+	return sheetmanager.SheetManagerCallbacks{
 		GetSheets:      GetSheets,
 		GetActiveIndex: func() int {
 			if globalWorkbook == nil {
@@ -246,5 +246,5 @@ func GetSheetManagerCallbacks(table *tview.Table) ui.SheetManagerCallbacks {
 // ShowSheetManagerDialog shows the sheet manager dialog
 func ShowSheetManagerDialog(app *tview.Application, table *tview.Table) {
 	callbacks := GetSheetManagerCallbacks(table)
-	ui.ShowSheetManager(app, table, callbacks)
+	sheetmanager.ShowSheetManager(app, table, callbacks)
 }

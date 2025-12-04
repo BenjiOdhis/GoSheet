@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"gosheet/internal/services/cell"
 	"gosheet/internal/utils"
+	"gosheet/internal/utils/evaluatefuncs"
 	"regexp"
 	"strconv"
 	"strings"
@@ -490,7 +491,7 @@ func clearOldDependencies(table *tview.Table, c *cell.Cell) {
 
 // Uses govaluate to return a result of the formula
 func evaluateExpression(formula string, env map[string]any) (any, error) {
-	functions := utils.GovalFuncs()
+	functions := evaluatefuncs.GovalFuncs()
 	
 	options := []expr.Option{
 		expr.Env(env),

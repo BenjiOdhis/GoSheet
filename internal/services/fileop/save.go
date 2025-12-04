@@ -5,7 +5,7 @@
 
 // save.go handles saving the current state of the table to a file.
 
-package file
+package fileop
 
 import (
 	"encoding/csv"

@@ -5,7 +5,7 @@
 
 // open.go handles opening and reading .gsheet, .json, or .txt files with workbook support.
 
-package file
+package fileop
 
 import (
 	"bufio"

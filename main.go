@@ -10,8 +10,9 @@ package main
 
 import (
 	"fmt"
+	"gosheet/internal/services/fileop"
 	"gosheet/internal/services/table"
-	"gosheet/internal/services/ui"
+	"gosheet/internal/services/ui/file"
 	"gosheet/internal/utils"
 	"os"
 	"runtime/debug"
@@ -63,10 +64,10 @@ func main() {
 
 	var t *tview.Table
 	if filename != "" {
-		ui.AddToRecentFiles(filename)
+		fileop.AddToRecentFiles(filename)
 		t = table.OpenTable(app, filename)
 	} else {
-		filename = ui.StartMenuUI(app)
+		filename = file.StartMenuUI(app)
 
 		if filename == "QUIT" {
         	return
@@ -75,7 +76,7 @@ func main() {
 		if filename == "THERE_IS_NO_FILE_SELECTED" {
 			t = table.NewTable(app)
 		} else {
-			ui.AddToRecentFiles(filename)
+			fileop.AddToRecentFiles(filename)
 			t = table.OpenTable(app, filename)
 		}
     }

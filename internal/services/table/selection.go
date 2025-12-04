@@ -9,8 +9,8 @@ package table
 
 import (
 	"fmt"
-	"gosheet/internal/services/ui"
 	"gosheet/internal/services/cell"
+	"gosheet/internal/services/ui/cell"
 	"gosheet/internal/utils"
 
 	"github.com/gdamore/tcell/v2"
@@ -156,11 +156,11 @@ func SelectInTable(app *tview.Application, table *tview.Table, vp *utils.Viewpor
 		}
 
 		if !c.HasFlag(cell.FlagEditable) {
-			ui.ShowUneditableModal(app, table, absRow, absCol, RecordCellEdit, EvaluateCell, RecalculateCell, activeData, activeViewport)
+			cellui.ShowUneditableModal(app, table, absRow, absCol, RecordCellEdit, EvaluateCell, RecalculateCell, activeData, activeViewport)
 			return
 		}
 
-		ui.EditCellDialog(app, table, absRow, absCol, RecordCellEdit, EvaluateCell, RecalculateCell, activeData, activeViewport)
+		cellui.EditCellDialog(app, table, absRow, absCol, RecordCellEdit, EvaluateCell, RecalculateCell, activeData, activeViewport)
 	})
 
 	table = InputCaptureService(app, table, vp, data)

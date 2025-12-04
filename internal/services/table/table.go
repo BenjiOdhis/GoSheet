@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 
 	"gosheet/internal/services/cell"
-	"gosheet/internal/services/file"
+	"gosheet/internal/services/fileop"
 	"gosheet/internal/utils"
 
 	"github.com/gdamore/tcell/v2"
@@ -38,7 +38,7 @@ func CreateTable(title string) *tview.Table {
 
 // OpenTable loads a table from a file and returns a tview.Table
 func OpenTable(app *tview.Application, filename string) *tview.Table {
-	cellSlice, err := file.OpenTable(filename)
+	cellSlice, err := fileop.OpenTable(filename)
 
 	if err != nil {
 		return nil

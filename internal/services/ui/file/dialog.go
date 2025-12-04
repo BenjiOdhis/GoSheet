@@ -1,45 +1,16 @@
-// Copyright (c) 2025 @drclcomputers. All rights reserved.
-//
-// This work is licensed under the terms of the MIT license.
-// For a copy, see <https://opensource.org/licenses/MIT>.
-
-// fileUI.go provides functions to display file-related dialogs in the UI.
-
-package ui
+package file
 
 import (
 	"fmt"
+	"gosheet/internal/services/cell"
+	"gosheet/internal/utils"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"gosheet/internal/services/cell"
-	"gosheet/internal/services/file"
-	"gosheet/internal/utils"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
-
-// FileFormat represents supported export formats
-type FileFormat struct {
-	Extension   string
-	Description string
-	SaveFunc    func(*tview.Table, string, map[[2]int]*cell.Cell) error
-}
-
-// Available file formats
-var FileFormats = []FileFormat{
-	{Extension: ".gsheet", Description: "GSheet (Native)", SaveFunc: file.SaveTable},      // JSON zipped using gzip, so very efficient
-	{Extension: ".json", Description: "JSON", SaveFunc: file.SaveTableAsJSON},         	     // works perfectly fine, but takes up more disk space 
-	{Extension: ".csv", Description: "CSV", SaveFunc: file.SaveTableAsCSV},                  // works only for text, as CSV can only save text
-	{Extension: ".html", Description: "HTML Table", SaveFunc: file.SaveTableAsHTML},		 // works; only for exporting
-	//{Extension: ".xlsx", Description: "Excel Spreadsheet", SaveFunc: file.SaveTableAsExcel}, // not implemented
-	{Extension: ".txt", Description: "Tab delimited text file", SaveFunc: file.SaveTableAsTXT}, // working, only for text
-	//{Extension: ".dbf", Description: "dBASE file", SaveFunc: file.SaveTableAsDBF}, // not implemented
-	//{Extension: ".ods", Description: "OpenDocument Spreadsheet", SaveFunc: file.SaveTableAsODS} // not implemented
-	//{Extension: ".pdf", Description: "Portable Document Format", SaveFUnc: file.SaveTableAsPDF} // not implemented
-}
 
 // ShowUnifiedFileDialog displays a unified file browser/selector for open and save operations
 func ShowUnifiedFileDialog(app *tview.Application, returnTo tview.Primitive, mode string, globalData map[[2]int]*cell.Cell, table *tview.Table, SetCurrentFilename func(table *tview.Table, filename string), MarkAsSaved func(table *tview.Table), HasUnsavedChanges func() bool, currentFilename string) {
@@ -423,7 +394,7 @@ func ShowUnifiedFileDialog(app *tview.Application, returnTo tview.Primitive, mod
 		AddItem(fileList, 0, 1, false)
 
 	instructions := tview.NewTextView().
-		SetText(" [yellow::b]Ctrl+←/→[::-] Switch Panel  [yellow::b]Enter[::-] Select   [yellow::b]Tab/Shift+Tab[::-] Navigate right form  [yellow::b]Esc[::-] Cancel").
+		SetText(" [yellow::b]Ctrl+←/→[::-] Switch Panel  [yellow::b]Enter[::-] Select  [yellow::b]Tab/Shift+Tab[::-] Navigate form buttons  [yellow::b]Esc[::-] Cancel").
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignCenter)
 	
@@ -433,9 +404,9 @@ func ShowUnifiedFileDialog(app *tview.Application, returnTo tview.Primitive, mod
 	
 	container.SetBorder(true).SetBorderColor(tcell.ColorLightBlue)
 	if mode == "save" {
-		container.SetTitle(" Save Spreadsheet | Use Ctrl+←/→ to navigate around the menus | Esc to quit")
+		container.SetTitle(" Save Spreadsheet ")
 	} else {
-		container.SetTitle(" Open Spreadsheet | Use Ctrl+←/→ to navigate around the menus | Esc to quit")
+		container.SetTitle(" Open Spreadsheet ")
 	}
 	
 	focusables := []tview.Primitive{quickAccessList, fileList, form}
@@ -460,57 +431,3 @@ func ShowUnifiedFileDialog(app *tview.Application, returnTo tview.Primitive, mod
 
 	app.SetRoot(container, true).SetFocus(form)
 }
-
-// Helper functions (add these to fileUI.go)
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func showOverwriteConfirmation(app *tview.Application, table *tview.Table, filename string, format FileFormat, shouldExit bool, globalData map[[2]int]*cell.Cell) {
-	modal := tview.NewModal().
-		SetText(fmt.Sprintf("File '%s' already exists.\n\nDo you want to overwrite it?", filepath.Base(filename))).
-		AddButtons([]string{"Overwrite", "Cancel"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Overwrite" {
-				performSave(app, table, filename, format, shouldExit, globalData)
-			} else {
-				app.SetRoot(table, true).SetFocus(table)
-			}
-		})
-	
-	modal.SetBackgroundColor(tcell.ColorDarkRed).SetBorderColor(tcell.ColorRed)
-	app.SetRoot(modal, true).SetFocus(modal)
-}
-
-func performSave(app *tview.Application, table *tview.Table, filename string, format FileFormat, shouldExit bool, globalData map[[2]int]*cell.Cell) {
-	err := format.SaveFunc(table, filename, globalData)
-	
-	if err != nil {
-		ShowErrorModal(app, table, fmt.Sprintf("Failed to save file:\n%s", err.Error()))
-		return
-	}
-
-	if format.Extension == ".json" || format.Extension == ".gsheet" || format.Extension == ".txt" {
-		AddToRecentFiles(filename)
-	}
-	
-	message := fmt.Sprintf("File saved successfully!\n\nLocation:\n%s", filename)
-	modal := tview.NewModal().
-		SetText(message).
-		AddButtons([]string{"OK"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if shouldExit {
-				app.Stop()
-			} else {
-				app.SetRoot(table, true).SetFocus(table)
-			}
-		})
-	
-	modal.SetBackgroundColor(tcell.ColorDarkGreen).SetBorderColor(tcell.ColorGreen)
-	app.SetRoot(modal, true).SetFocus(modal)
-}
-
