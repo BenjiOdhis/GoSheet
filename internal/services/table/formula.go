@@ -197,19 +197,15 @@ func EvaluateAllFormulasOnLoad(table *tview.Table) error {
 			continue
 		}
 
-		// First pass: clear all evaluation flags
 		for _, cellData := range sheet.Data {
 			if cellData.IsFormula() {
 				cellData.ClearFlag(cell.FlagEvaluated)
 			}
 		}
 
-		// Second pass: evaluate all formulas
 		for _, cellData := range sheet.Data {
 			if cellData.IsFormula() && !cellData.HasFlag(cell.FlagEvaluated) {
-				// Import the formula evaluation from formula.go
 				if err := EvaluateCell(table, cellData); err != nil {
-					// Continue even if one cell fails
 					continue
 				}
 			}

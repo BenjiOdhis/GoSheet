@@ -1,3 +1,10 @@
+// Copyright (c) 2025 @drclcomputers. All rights reserved.
+//
+// This work is licensed under the terms of the MIT license.
+// For a copy, see <https://opensource.org/licenses/MIT>.
+
+// operations.go provides functions that manage sheets
+
 package sheetmanager
 
 import (
@@ -105,7 +112,7 @@ func showRenameSheetFromManager(app *tview.Application,
 
 			app.SetRoot(returnTo, true).SetFocus(list)
 		}).
-		AddButton("✗ Cancel", func() {
+		AddButton("x Cancel", func() {
 			app.SetRoot(returnTo, true).SetFocus(list)
 		})
 
@@ -123,7 +130,7 @@ func confirmDeleteSheetFromManager(app *tview.Application,
 	
 	sheets := callbacks.GetSheets()
 	if len(sheets) <= 1 {
-		ShowWarningModal(app, returnTo, "⚠️  Cannot delete the last sheet!\n\nA workbook must have at least one sheet.")
+		ShowWarningModal(app, returnTo, "Cannot delete the last sheet!\n\nA workbook must have at least one sheet.")
 		return
 	}
 
@@ -143,7 +150,7 @@ func confirmDeleteSheetFromManager(app *tview.Application,
 				"  • [white]%d[-] cells with data\n"+
 				"  • All formulas and formatting\n"+
 				"  • All undo/redo history\n\n"+
-				"[red::b]⚠️  This action cannot be undone![::-]",
+				"[red::b]This action cannot be undone![::-]",
 			sheet.Name,
 			sheet.CellCount,
 		)).

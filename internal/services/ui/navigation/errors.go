@@ -1,3 +1,10 @@
+// Copyright (c) 2025 @drclcomputers. All rights reserved.
+//
+// This work is licensed under the terms of the MIT license.
+// For a copy, see <https://opensource.org/licenses/MIT>.
+
+// errors.go provides error/warning modals
+
 package navigation
 
 import "github.com/rivo/tview"

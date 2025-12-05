@@ -1,3 +1,10 @@
+// Copyright (c) 2025 @drclcomputers. All rights reserved.
+//
+// This work is licensed under the terms of the MIT license.
+// For a copy, see <https://opensource.org/licenses/MIT>.
+
+// warning.go provides a warning modal
+
 package sheetmanager
 
 import "github.com/rivo/tview"

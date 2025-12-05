@@ -1,3 +1,10 @@
+// Copyright (c) 2025 @drclcomputers. All rights reserved.
+//
+// This work is licensed under the terms of the MIT license.
+// For a copy, see <https://opensource.org/licenses/MIT>.
+
+// dialog.go provides the main dialog for managing sheets
+
 package sheetmanager
 
 import (
@@ -7,7 +14,6 @@ import (
 
 // ShowSheetManager displays the comprehensive sheet management dialog
 func ShowSheetManager(app *tview.Application, table *tview.Table, callbacks SheetManagerCallbacks) {
-	// Sheet list with enhanced styling
 	list := tview.NewList().
 		SetSelectedBackgroundColor(tcell.ColorDarkCyan).
 		SetSelectedTextColor(tcell.ColorWhite).
@@ -21,7 +27,6 @@ func ShowSheetManager(app *tview.Application, table *tview.Table, callbacks Shee
 
 	updateSheetList(list, callbacks)
 
-	// Info panel with better formatting
 	infoPanel := tview.NewTextView().
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft).
@@ -32,7 +37,6 @@ func ShowSheetManager(app *tview.Application, table *tview.Table, callbacks Shee
 		SetBorderColor(tcell.ColorLightBlue).
 		SetTitleAlign(tview.AlignLeft)
 
-	// Layout assembly
 	leftPanel := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(list, 0, 3, true).
 		AddItem(infoPanel, 12, 0, false)
@@ -89,7 +93,6 @@ func ShowSheetManager(app *tview.Application, table *tview.Table, callbacks Shee
 		return event
 	})
 
-	// Update info panel when selection changes
 	list.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
 		sheets := callbacks.GetSheets()
 		if index >= 0 && index < len(sheets) {

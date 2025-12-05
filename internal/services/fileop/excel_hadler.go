@@ -37,7 +37,6 @@ func (h *ExcelFormatHandler) hasNonDefaultFormatting(f *excelize.File, sheetName
 		return false
 	}
 
-	// Check for non-default font properties
 	if style.Font != nil {
 		if style.Font.Bold || style.Font.Italic || style.Font.Strike || style.Font.Underline != "" {
 			return true
@@ -47,20 +46,16 @@ func (h *ExcelFormatHandler) hasNonDefaultFormatting(f *excelize.File, sheetName
 		}
 	}
 
-	// Check for background color
 	if len(style.Fill.Color) > 0 && style.Fill.Color[0] != "" {
 		bgColor := strings.ToUpper(strings.TrimSpace(style.Fill.Color[0]))
-		// Strip alpha channel if present
 		if len(bgColor) == 8 {
 			bgColor = bgColor[2:]
 		}
-		// Check if it's not white/transparent (default)
 		if bgColor != "FFFFFF" && bgColor != "" {
 			return true
 		}
 	}
 
-	// Check for alignment
 	if style.Alignment != nil && style.Alignment.Horizontal != "" {
 		return true
 	}
@@ -150,7 +145,6 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 	var cells []*cell.Cell
 	var maxRow, maxCol int32
 
-	// First pass: determine actual used range including formatted cells
 	for rowIdx, row := range rows {
 		rowNum := int32(rowIdx + 1)
 		if rowNum > maxRow {
@@ -164,7 +158,6 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 		}
 	}
 
-	// Second pass: read all cells including those with only formatting
 	for rowIdx := 0; rowIdx < int(maxRow); rowIdx++ {
 		for colIdx := 0; colIdx < int(maxCol); colIdx++ {
 			rowNum := int32(rowIdx + 1)
@@ -175,10 +168,8 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 			formula, _ := f.GetCellFormula(sheetName, cellCoord)
 			cellValue, _ := f.GetCellValue(sheetName, cellCoord)
 			
-			// Check if cell has any formatting (color, background, etc.)
 			hasFormatting := h.hasNonDefaultFormatting(f, sheetName, cellCoord)
 			
-			// Skip only if completely empty (no value, formula, or formatting)
 			if cellValue == "" && formula == "" && !hasFormatting {
 				continue
 			}
@@ -190,7 +181,6 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 			autotype := "auto"
 
 			if formula != "" {
-				// Clean up Excel formula artifacts
 				formula = strings.TrimPrefix(formula, "_xludf.")
 				formula = strings.TrimPrefix(formula, "_XLUDF.")
 				formula = strings.TrimSpace(formula)
@@ -229,7 +219,7 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 				DateTimeFormat:     &autotype,
 
 				Align: 0,
-				Flags: cell.FlagEditable, // Don't set FlagEvaluated on import!
+				Flags: cell.FlagEditable,
 
 				DependsOn:  []*string{},
 				Dependents: []*string{},
@@ -356,7 +346,6 @@ func (h *ExcelFormatHandler) readCellFormatting(f *excelize.File, sheetName, cel
 			c.SetFlag(cell.FlagUnderline)
 		}
 
-		// Fixed color parsing
 		if style.Font.Color != "" {
 			if color, err := parseExcelColor(style.Font.Color); err == nil {
 				c.Color = color
@@ -389,7 +378,6 @@ func (h *ExcelFormatHandler) writeCellFormatting(f *excelize.File, sheetName, ce
 		Alignment: &excelize.Alignment{},
 	}
 
-	// Font styling
 	style.Font.Bold = c.HasFlag(cell.FlagBold)
 	style.Font.Italic = c.HasFlag(cell.FlagItalic)
 	style.Font.Strike = c.HasFlag(cell.FlagStrikethrough)
@@ -398,12 +386,10 @@ func (h *ExcelFormatHandler) writeCellFormatting(f *excelize.File, sheetName, ce
 		style.Font.Underline = "single"
 	}
 
-	// Font color - only set if not default white
 	if !c.Color.IsDefaultWhite() {
 		style.Font.Color = strings.TrimPrefix(c.Color.Hex(), "#")
 	}
 
-	// Background color - only set if not default black
 	if !c.BgColor.IsDefaultBlack() {
 		style.Fill = excelize.Fill{
 			Type:    "pattern",
@@ -412,7 +398,6 @@ func (h *ExcelFormatHandler) writeCellFormatting(f *excelize.File, sheetName, ce
 		}
 	}
 
-	// Alignment
 	switch c.Align {
 	case 1:
 		style.Alignment.Horizontal = "left"

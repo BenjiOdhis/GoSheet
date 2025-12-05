@@ -3,7 +3,7 @@
 // This work is licensed under the terms of the MIT license.
 // For a copy, see <https://opensource.org/licenses/MIT>.
 
-// dataValidationUI.go implements cell validation rules with Excel-like presets
+// validation implements cell validation rules
 
 package datavalidation
 

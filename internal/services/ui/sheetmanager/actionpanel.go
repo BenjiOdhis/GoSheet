@@ -1,3 +1,10 @@
+// Copyright (c) 2025 @drclcomputers. All rights reserved.
+//
+// This work is licensed under the terms of the MIT license.
+// For a copy, see <https://opensource.org/licenses/MIT>.
+
+// actionpanel.go provides the action panel on the right of the sheet manager dialog
+
 package sheetmanager
 
 import (
@@ -45,7 +52,6 @@ func createActionPanel(app *tview.Application, table *tview.Table,
 		return btn
 	}
 
-	// Action buttons
 	newSheetBtn := createActionBtn(
 		"", "New Sheet", "Alt+N",
 		"Create a blank sheet",
