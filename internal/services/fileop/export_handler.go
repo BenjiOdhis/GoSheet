@@ -17,23 +17,21 @@ import (
 	"gosheet/internal/utils"
 )
 
-// ExportFormatHandler handles export-only formats
 type ExportFormatHandler struct{}
 
-// SupportsFormat returns whether this handler supports the format
+// SupportsFormat checks whether this handler supports the format
 func (h *ExportFormatHandler) SupportsFormat(format FileFormat) bool {
 	return format == FormatCSV || format == FormatTXT || format == FormatHTML
 }
 
 // Write exports workbook to CSV, TXT, or HTML
 func (h *ExportFormatHandler) Write(filename string, sheets []SheetInfo, activeSheet int) error {
-	// Export formats only save the active sheet
 	if activeSheet < 0 || activeSheet >= len(sheets) {
 		activeSheet = 0
 	}
-	
+
 	sheet := sheets[activeSheet]
-	
+
 	format, _ := DetectFormat(filename)
 	switch format {
 	case FormatCSV:
@@ -58,7 +56,6 @@ func (h *ExportFormatHandler) writeCSV(filename string, sheet SheetInfo) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	// Find max dimensions
 	var maxRow, maxCol int32
 	for key := range sheet.GlobalData {
 		r, c := int32(key[0]), int32(key[1])
@@ -70,14 +67,19 @@ func (h *ExportFormatHandler) writeCSV(filename string, sheet SheetInfo) error {
 		}
 	}
 
-	// Write rows
 	for row := int32(1); row <= maxRow; row++ {
 		record := make([]string, maxCol)
 
 		for col := int32(1); col <= maxCol; col++ {
 			key := [2]int{int(row), int(col)}
 			if cellData, exists := sheet.GlobalData[key]; exists && cellData.RawValue != nil {
-				record[col-1] = *cellData.RawValue
+				if *cellData.RawValue != "" {
+					record[col-1] = *cellData.RawValue
+				} else if cellData.Display != nil {
+					record[col-1] = *cellData.Display
+				} else {
+					record[col-1] = ""
+				}
 			} else {
 				record[col-1] = ""
 			}
@@ -99,7 +101,6 @@ func (h *ExportFormatHandler) writeTXT(filename string, sheet SheetInfo) error {
 	}
 	defer file.Close()
 
-	// Find max dimensions
 	var maxRow, maxCol int32
 	for key := range sheet.GlobalData {
 		r, c := int32(key[0]), int32(key[1])
@@ -111,14 +112,19 @@ func (h *ExportFormatHandler) writeTXT(filename string, sheet SheetInfo) error {
 		}
 	}
 
-	// Write rows
 	for row := int32(1); row <= maxRow; row++ {
 		var values []string
 
 		for col := int32(1); col <= maxCol; col++ {
 			key := [2]int{int(row), int(col)}
 			if cellData, exists := sheet.GlobalData[key]; exists && cellData.RawValue != nil {
-				values = append(values, *cellData.RawValue)
+				if *cellData.RawValue != "" {
+					values = append(values, *cellData.RawValue)
+				} else if cellData.Display != nil {
+					values = append(values, *cellData.Display)
+				} else {
+					values = append(values, "")
+				}
 			} else {
 				values = append(values, "")
 			}
@@ -135,7 +141,6 @@ func (h *ExportFormatHandler) writeTXT(filename string, sheet SheetInfo) error {
 
 // writeHTML exports to HTML table format
 func (h *ExportFormatHandler) writeHTML(filename string, sheet SheetInfo) error {
-	// Find max dimensions
 	var maxRow, maxCol int32
 	for key := range sheet.GlobalData {
 		r, c := int32(key[0]), int32(key[1])
@@ -155,7 +160,6 @@ func (h *ExportFormatHandler) writeHTML(filename string, sheet SheetInfo) error 
 
 	var html strings.Builder
 
-	// Write HTML header
 	html.WriteString(`<!DOCTYPE html>
 <html>
 <head>
@@ -182,14 +186,12 @@ func (h *ExportFormatHandler) writeHTML(filename string, sheet SheetInfo) error 
 				<th>#</th>
 `)
 
-	// Write column headers
 	for col := int32(1); col <= maxCol; col++ {
 		html.WriteString(fmt.Sprintf("<th>%s</th>\n", utils.ColumnName(col)))
 	}
 
 	html.WriteString("</tr>\n</thead>\n<tbody>\n")
 
-	// Write data rows
 	for row := int32(1); row <= maxRow; row++ {
 		html.WriteString("<tr>\n")
 		html.WriteString(fmt.Sprintf("<td style=\"background-color: #4CAF50; color: white; font-weight: bold;\"><b>%d</b></td>\n", row))
@@ -215,7 +217,9 @@ func (h *ExportFormatHandler) writeHTML(filename string, sheet SheetInfo) error 
 			tooltip := ""
 			if cellData.HasFlag(cell.FlagFormula) {
 				class = " class=\"formula-cell\""
-				tooltip = fmt.Sprintf(" title=\"Formula: %s\"", htmlEscape(*cellData.RawValue))
+				if cellData.RawValue != nil {
+					tooltip = fmt.Sprintf(" title=\"Formula: %s\"", htmlEscape(*cellData.RawValue))
+				}
 			}
 
 			if style != "" {
@@ -253,11 +257,11 @@ func (h *ExportFormatHandler) buildCellStyle(cellData *cell.Cell) string {
 	}
 
 	switch cellData.Align {
-	case 1: // tview.AlignLeft
+	case 1:
 		styles = append(styles, "text-align: left")
-	case 2: // tview.AlignCenter
+	case 2:
 		styles = append(styles, "text-align: center")
-	case 3: // tview.AlignRight
+	case 3:
 		styles = append(styles, "text-align: right")
 	}
 

@@ -19,46 +19,111 @@ import (
 	"github.com/rivo/tview"
 )
 
-
 var globalWorkbook *Workbook
+
+// GetWorkbookSheets returns the current workbook's sheets in fileop format
+func GetWorkbookSheets() (sheets []fileop.SheetInfo, activeSheet int) {
+	if globalWorkbook == nil || len(globalWorkbook.Sheets) == 0 {
+		return nil, 0
+	}
+
+	result := make([]fileop.SheetInfo, len(globalWorkbook.Sheets))
+	for i, sheet := range globalWorkbook.Sheets {
+		if sheet == nil {
+			continue
+		}
+
+		maxRow := int32(0)
+		maxCol := int32(0)
+
+		dataCopy := make(map[[2]int]*cell.Cell)
+		for coord, cellData := range sheet.Data {
+			dataCopy[coord] = cellData
+			if coord[0] > int(maxRow) {
+				maxRow = int32(coord[0])
+			}
+			if coord[1] > int(maxCol) {
+				maxCol = int32(coord[1])
+			}
+		}
+
+		result[i] = fileop.SheetInfo{
+			Name:       sheet.Name,
+			Rows:       maxRow + 1,
+			Cols:       maxCol + 1,
+			GlobalData: dataCopy,
+		}
+	}
+
+	return result, globalWorkbook.ActiveSheet
+}
+
+// init registers the workbook getter hook with fileop package
+func init() {
+	fileop.GetWorkbookForSaveFunc = func() (sheets []fileop.SheetInfo, activeSheet int, hasWorkbook bool) {
+		sheets, activeSheet = GetWorkbookSheets()
+		hasWorkbook = globalWorkbook != nil && len(globalWorkbook.Sheets) > 0
+		return
+	}
+}
 
 // Creates an empty tview table
 func CreateTable(title string) *tview.Table {
-    table := tview.NewTable().
-        SetBorders(false).
-        SetFixed(1, 1).
-        SetSelectable(true, true)
+	table := tview.NewTable().
+		SetBorders(false).
+		SetFixed(1, 1).
+		SetSelectable(true, true)
 	table.SetBorder(true)
 
-	SetCurrentFilename(table, title)	
+	SetCurrentFilename(table, title)
 	updateTableTitle(table)
 
-    return table
+	return table
 }
 
 // OpenTable loads a table from a file and returns a tview.Table
 func OpenTable(app *tview.Application, filename string) *tview.Table {
-	cellSlice, err := fileop.OpenTable(filename)
+	workbookResult, err := fileop.OpenWorkbook(filename)
 
 	if err != nil {
 		return nil
 	}
 
-	// Initialize workbook
-	globalWorkbook = NewWorkbook()
-	globalWorkbook.CurrentFile = filename
-	globalWorkbook.HasChanges = false
-
-	// Get the first sheet
-	sheet := globalWorkbook.GetActiveSheet()
-	
-	// Populate sheet data
-	for _, c := range cellSlice {
-		key := [2]int{int(c.Row), int(c.Column)}
-		sheet.Data[key] = c
+	globalWorkbook = &Workbook{
+		Sheets:      make([]*Sheet, 0),
+		ActiveSheet: 0,
+		CurrentFile: filename,
+		HasChanges:  false,
 	}
 
+	for _, sheetResult := range workbookResult.Sheets {
+		newSheet := NewSheet(sheetResult.Name)
+
+		for _, c := range sheetResult.Cells {
+			key := [2]int{int(c.Row), int(c.Column)}
+			newSheet.Data[key] = c
+		}
+
+		globalWorkbook.Sheets = append(globalWorkbook.Sheets, newSheet)
+	}
+
+	// Ensure we have at least one sheet
+	if len(globalWorkbook.Sheets) == 0 {
+		globalWorkbook.Sheets = append(globalWorkbook.Sheets, NewSheet("Sheet1"))
+	}
+
+	// Set active sheet
+	if workbookResult.ActiveSheet >= len(globalWorkbook.Sheets) {
+		globalWorkbook.ActiveSheet = 0
+	} else {
+		globalWorkbook.ActiveSheet = workbookResult.ActiveSheet
+	}
+
+	sheet := globalWorkbook.GetActiveSheet()
+
 	table := CreateTable(filename)
+	
+	EvaluateAllFormulasOnLoad(table)
 
 	RenderVisible(table, sheet.Viewport, sheet.Data)
 	table = SelectInTable(app, table, sheet.Viewport, sheet.Data)
@@ -71,28 +136,28 @@ func NewTable(app *tview.Application) *tview.Table {
 	globalWorkbook = NewWorkbook()
 	globalWorkbook.CurrentFile = ""
 	globalWorkbook.HasChanges = false
-	
+
 	table := CreateTable("Untitled")
-	
+
 	sheet := globalWorkbook.GetActiveSheet()
 	RenderVisible(table, sheet.Viewport, sheet.Data)
 	table = SelectInTable(app, table, sheet.Viewport, sheet.Data)
-	
+
 	updateTableTitle(table)
-	
+
 	return table
 }
 
 // Cleanup unused cells from memory
 func CleanupDistantCells(data map[[2]int]*cell.Cell, vp *utils.Viewport, keepDistance int32) {
-	minRow := max(1, vp.TopRow - keepDistance)
-    maxRow := vp.TopRow + vp.ViewRows + keepDistance
-    minCol := max(1, vp.LeftCol - keepDistance)
-    maxCol := vp.LeftCol + vp.ViewCols + keepDistance
+	minRow := max(1, vp.TopRow-keepDistance)
+	maxRow := vp.TopRow + vp.ViewRows + keepDistance
+	minCol := max(1, vp.LeftCol-keepDistance)
+	maxCol := vp.LeftCol + vp.ViewCols + keepDistance
 
 	for key, cellData := range data {
 		row, col := int32(key[0]), int32(key[1])
-		
+
 		if row < minRow || row > maxRow || col < minCol || col > maxCol {
 			if isEmptyCell(cellData) {
 				delete(data, key)
@@ -119,12 +184,12 @@ func isEmptyCell(c *cell.Cell) bool {
 		return false
 	}
 	if c.Color[0] != 255 || c.Color[1] != 255 || c.Color[2] != 255 {
-        return false
-    }
-    if c.BgColor[0] != 0 || c.BgColor[1] != 0 || c.BgColor[2] != 0 {
-        return false
-    }	
-	
+		return false
+	}
+	if c.BgColor[0] != 0 || c.BgColor[1] != 0 || c.BgColor[2] != 0 {
+		return false
+	}
+
 	return true
 }
 
@@ -144,7 +209,7 @@ func RenderVisible(table *tview.Table, vp *utils.Viewport, data map[[2]int]*cell
 		label := fmt.Sprintf("%d", r)
 		rowCell := cell.NewCell(int32(r), 0, label)
 		rowCell.MinWidth = 2
-		rowCell.MaxWidth = int16(len(label))+2
+		rowCell.MaxWidth = int16(len(label)) + 2
 		table.SetCell(int(r-vp.TopRow+1), 0, rowCell.ToTViewCell())
 	}
 
@@ -153,7 +218,7 @@ func RenderVisible(table *tview.Table, vp *utils.Viewport, data map[[2]int]*cell
 			key := [2]int{int(r), int(c)}
 			visualRow := r - vp.TopRow + 1
 			visualCol := c - vp.LeftCol + 1
-			
+
 			var tvCell *tview.TableCell
 			if cellData, exists := data[key]; exists {
 				tvCell = cellData.ToTViewCell()
@@ -161,13 +226,13 @@ func RenderVisible(table *tview.Table, vp *utils.Viewport, data map[[2]int]*cell
 				tvCell = tview.NewTableCell("").
 					SetAlign(tview.AlignLeft).
 					SetTextColor(tcell.NewRGBColor(255, 255, 255)).
-					SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))	
+					SetBackgroundColor(tcell.NewRGBColor(0, 0, 0))
 			}
-			
+
 			table.SetCell(int(visualRow), int(visualCol), tvCell)
 		}
 	}
-	
+
 	CleanupDistantCells(data, vp, 100)
 }
 

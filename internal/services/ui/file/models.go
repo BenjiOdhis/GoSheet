@@ -1,13 +1,9 @@
-// Copyright (c) 2025 @drclcomputers. All rights reserved.
-//
-// This work is licensed under the terms of the MIT license.
-// For a copy, see <https://opensource.org/licenses/MIT>.
-
 package file
 
 import (
 	"gosheet/internal/services/cell"
 	"gosheet/internal/services/fileop"
+
 	"github.com/rivo/tview"
 )
 
@@ -23,7 +19,7 @@ type FileFormatUI struct {
 func GetFileFormats() []FileFormatUI {
 	formats := fileop.GetWritableFormats()
 	result := make([]FileFormatUI, len(formats))
-	
+
 	for i, format := range formats {
 		result[i] = FileFormatUI{
 			Format:      format,
@@ -32,29 +28,20 @@ func GetFileFormats() []FileFormatUI {
 			SaveFunc:    getSaveFunc(format),
 		}
 	}
-	
+
 	return result
 }
 
-// getSaveFunc returns the legacy save function for a format
+// getSaveFunc returns the save function for a format (calls modern SaveWorkbookAs directly via hook)
 func getSaveFunc(format fileop.FileFormat) func(*tview.Table, string, map[[2]int]*cell.Cell) error {
-	switch format {
-	case fileop.FormatGSheet:
-		return fileop.SaveTable
-	case fileop.FormatJSON:
-		return fileop.SaveTableAsJSON
-	case fileop.FormatCSV:
-		return fileop.SaveTableAsCSV
-	case fileop.FormatHTML:
-		return fileop.SaveTableAsHTML
-	case fileop.FormatTXT:
-		return fileop.SaveTableAsTXT
-	case fileop.FormatXLSX:
-		return fileop.SaveTableAsExcel
-	default:
-		return nil
+	return func(_ *tview.Table, filename string, _ map[[2]int]*cell.Cell) error {
+		sheets, activeSheet, hasWorkbook := fileop.GetWorkbookForSave()
+		if !hasWorkbook {
+			return fileop.SaveWorkbookAs([]fileop.SheetInfo{}, 0, filename, format)
+		}
+		return fileop.SaveWorkbookAs(sheets, activeSheet, filename, format)
 	}
 }
 
-// Legacy FileFormats array for compatibility with existing UI code
+// FileFormats array for UI code
 var FileFormats = GetFileFormats()

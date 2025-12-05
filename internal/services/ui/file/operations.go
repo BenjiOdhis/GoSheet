@@ -54,7 +54,7 @@ func performSave(app *tview.Application, table *tview.Table, filename string, fo
 		return
 	}
 
-	if format.Extension == ".json" || format.Extension == ".gsheet" || format.Extension == ".txt" {
+	if format.Extension == ".json" || format.Extension == ".gsheet" || format.Extension == ".txt" || format.Extension == ".xlsx" {
 		fileop.AddToRecentFiles(filename)
 	}
 	

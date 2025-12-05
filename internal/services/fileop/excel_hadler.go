@@ -26,6 +26,48 @@ func (h *ExcelFormatHandler) SupportsFormat(format FileFormat) bool {
 	return format == FormatXLSX
 }
 
+func (h *ExcelFormatHandler) hasNonDefaultFormatting(f *excelize.File, sheetName, cellCoord string) bool {
+	styleID, err := f.GetCellStyle(sheetName, cellCoord)
+	if err != nil || styleID == 0 {
+		return false
+	}
+
+	style, err := f.GetStyle(styleID)
+	if err != nil {
+		return false
+	}
+
+	// Check for non-default font properties
+	if style.Font != nil {
+		if style.Font.Bold || style.Font.Italic || style.Font.Strike || style.Font.Underline != "" {
+			return true
+		}
+		if style.Font.Color != "" && style.Font.Color != "000000" {
+			return true
+		}
+	}
+
+	// Check for background color
+	if len(style.Fill.Color) > 0 && style.Fill.Color[0] != "" {
+		bgColor := strings.ToUpper(strings.TrimSpace(style.Fill.Color[0]))
+		// Strip alpha channel if present
+		if len(bgColor) == 8 {
+			bgColor = bgColor[2:]
+		}
+		// Check if it's not white/transparent (default)
+		if bgColor != "FFFFFF" && bgColor != "" {
+			return true
+		}
+	}
+
+	// Check for alignment
+	if style.Alignment != nil && style.Alignment.Horizontal != "" {
+		return true
+	}
+
+	return false
+}
+
 // Read reads an Excel .xlsx file
 func (h *ExcelFormatHandler) Read(filename string) (*WorkbookResult, error) {
 	f, err := excelize.OpenFile(filename)
@@ -67,8 +109,9 @@ func (h *ExcelFormatHandler) Write(filename string, sheets []SheetInfo, activeSh
 	f := excelize.NewFile()
 	defer f.Close()
 
-	// Delete default sheet
-	f.DeleteSheet("Sheet1")
+	if len(sheets) > 0 {
+		f.DeleteSheet("Sheet1")
+	}
 
 	for i, sheet := range sheets {
 		sheetName := sheet.Name
@@ -76,18 +119,15 @@ func (h *ExcelFormatHandler) Write(filename string, sheets []SheetInfo, activeSh
 			sheetName = fmt.Sprintf("Sheet%d", i+1)
 		}
 
-		// Create sheet
-		index, err := f.NewSheet(sheetName)
+		_, err := f.NewSheet(sheetName)
 		if err != nil {
 			return fmt.Errorf("failed to create sheet %s: %v", sheetName, err)
 		}
 
-		// Set as active if needed
 		if i == activeSheet {
-			f.SetActiveSheet(index)
+			f.SetActiveSheet(i)
 		}
 
-		// Write cells
 		if err := h.writeSheet(f, sheetName, sheet); err != nil {
 			return fmt.Errorf("failed to write sheet %s: %v", sheetName, err)
 		}
@@ -110,40 +150,54 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 	var cells []*cell.Cell
 	var maxRow, maxCol int32
 
+	// First pass: determine actual used range including formatted cells
 	for rowIdx, row := range rows {
 		rowNum := int32(rowIdx + 1)
 		if rowNum > maxRow {
 			maxRow = rowNum
 		}
-
-		for colIdx, cellValue := range row {
+		for colIdx := range row {
 			colNum := int32(colIdx + 1)
 			if colNum > maxCol {
 				maxCol = colNum
 			}
+		}
+	}
 
-			if cellValue == "" {
+	// Second pass: read all cells including those with only formatting
+	for rowIdx := 0; rowIdx < int(maxRow); rowIdx++ {
+		for colIdx := 0; colIdx < int(maxCol); colIdx++ {
+			rowNum := int32(rowIdx + 1)
+			colNum := int32(colIdx + 1)
+
+			cellCoord, _ := excelize.CoordinatesToCellName(colIdx+1, rowIdx+1)
+			
+			formula, _ := f.GetCellFormula(sheetName, cellCoord)
+			cellValue, _ := f.GetCellValue(sheetName, cellCoord)
+			
+			// Check if cell has any formatting (color, background, etc.)
+			hasFormatting := h.hasNonDefaultFormatting(f, sheetName, cellCoord)
+			
+			// Skip only if completely empty (no value, formula, or formatting)
+			if cellValue == "" && formula == "" && !hasFormatting {
 				continue
 			}
 
-			// Get cell coordinates
-			cellCoord, _ := excelize.CoordinatesToCellName(colIdx+1, rowIdx+1)
-
-			// Try to get formula
-			formula, _ := f.GetCellFormula(sheetName, cellCoord)
-			
 			rawValue := cellValue
 			displayValue := cellValue
 			typeValue := "string"
 			emptyStr := ""
 			autotype := "auto"
 
-			// If cell has formula, use it
 			if formula != "" {
-				rawValue = "$=" + formula
+				// Clean up Excel formula artifacts
+				formula = strings.TrimPrefix(formula, "_xludf.")
+				formula = strings.TrimPrefix(formula, "_XLUDF.")
+				formula = strings.TrimSpace(formula)
+				
+				rawValue = "$=" + h.convertExcelFormulaToGoSheet(formula)
 				typeValue = "formula"
 			} else {
-				// Auto-detect type
 				if utils.IsNumber(cellValue, utils.DEFAULT_CELL_FINANCIAL_SIGN) {
 					typeValue = "number"
 				} else if isValid, format := utils.IsValidDateTime(cellValue); isValid {
@@ -175,14 +229,22 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 				DateTimeFormat:     &autotype,
 
 				Align: 0,
-				Flags: 0,
+				Flags: cell.FlagEditable, // Don't set FlagEvaluated on import!
 
 				DependsOn:  []*string{},
 				Dependents: []*string{},
 			}
 
-			// Try to read formatting
 			h.readCellFormatting(f, sheetName, cellCoord, c)
+
+			comments, _ := f.GetComments(sheetName)
+			for _, comment := range comments {
+				if comment.Cell == cellCoord && len(comment.Paragraph) > 0 {
+					noteText := comment.Paragraph[0].Text
+					*c.Notes = noteText
+					break
+				}
+			}
 
 			cells = append(cells, c)
 		}
@@ -193,47 +255,82 @@ func (h *ExcelFormatHandler) readSheet(f *excelize.File, sheetName string) ([]*c
 
 // writeSheet writes a single sheet to Excel file
 func (h *ExcelFormatHandler) writeSheet(f *excelize.File, sheetName string, sheet SheetInfo) error {
-	for key, cellData := range sheet.GlobalData {
-		row, col := int(key[0]), int(key[1])
-		
-		// Get cell coordinate
+	for _, cellData := range sheet.GlobalData {
+		row, col := int(cellData.Row), int(cellData.Column)
+
 		cellCoord, err := excelize.CoordinatesToCellName(col, row)
 		if err != nil {
 			continue
 		}
 
-		// Write value or formula
+		h.writeCellFormatting(f, sheetName, cellCoord, cellData)
+
 		if cellData.IsFormula() && cellData.RawValue != nil {
-			// Convert GoSheet formula to Excel formula
-			formula := strings.TrimPrefix(*cellData.RawValue, "$=")
-			formula = h.convertFormulaToExcel(formula)
+			formulaStr := strings.TrimPrefix(*cellData.RawValue, "$=")
+			formulaStr = strings.TrimSpace(formulaStr)
 			
-			if err := f.SetCellFormula(sheetName, cellCoord, formula); err != nil {
-				// If formula fails, write as value
-				if cellData.Display != nil {
-					f.SetCellValue(sheetName, cellCoord, *cellData.Display)
+			if formulaStr != "" {
+				excelFormula := h.convertFormulaToExcel(formulaStr)
+				
+				if err := f.SetCellFormula(sheetName, cellCoord, excelFormula); err != nil {
+					if cellData.Display != nil && *cellData.Display != "" {
+						f.SetCellValue(sheetName, cellCoord, *cellData.Display)
+					}
 				}
-			}
-		} else if cellData.RawValue != nil {
-			// Write raw value
-			value := *cellData.RawValue
-			
-			// Try to convert to number if possible
-			if num, err := strconv.ParseFloat(value, 64); err == nil {
-				f.SetCellValue(sheetName, cellCoord, num)
-			} else {
-				f.SetCellValue(sheetName, cellCoord, value)
+				
+				goto handleMetadata
 			}
 		}
 
-		// Apply formatting
-		h.writeCellFormatting(f, sheetName, cellCoord, cellData)
+		if cellData.RawValue != nil && *cellData.RawValue != "" {
+			value := *cellData.RawValue
+
+			if *cellData.Type == "number" || *cellData.Type == "financial" {
+				cleanValue := value
+				cleanValue = strings.ReplaceAll(cleanValue, string(cellData.ThousandsSeparator), "")
+				cleanValue = strings.TrimPrefix(cleanValue, string(cellData.FinancialSign))
+				cleanValue = strings.TrimSpace(cleanValue)
+				
+				if num, err := strconv.ParseFloat(cleanValue, 64); err == nil {
+					f.SetCellValue(sheetName, cellCoord, num)
+				} else {
+					f.SetCellValue(sheetName, cellCoord, value)
+				}
+			} else {
+				f.SetCellValue(sheetName, cellCoord, value)
+			}
+		} else if cellData.Display != nil && *cellData.Display != "" {
+			f.SetCellValue(sheetName, cellCoord, *cellData.Display)
+		}
+
+	handleMetadata:
+		if cellData.Notes != nil && strings.TrimSpace(*cellData.Notes) != "" {
+			err := f.AddComment(sheetName, excelize.Comment{
+				Cell:   cellCoord,
+				Author: "GoSheet",
+				Paragraph: []excelize.RichTextRun{
+					{Text: *cellData.Notes},
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		if cellData.MinWidth > 0 {
+			colName, _ := excelize.ColumnNumberToName(col)
+			currentWidth, _ := f.GetColWidth(sheetName, colName)
+			newWidth := float64(cellData.MinWidth)
+			if newWidth > currentWidth {
+				f.SetColWidth(sheetName, colName, colName, newWidth)
+			}
+		}
 	}
 
 	return nil
 }
 
-// readCellFormatting reads formatting from Excel cell
+// readCellFormatting reads formatting from Excel cell INCLUDING COLORS
 func (h *ExcelFormatHandler) readCellFormatting(f *excelize.File, sheetName, cellCoord string, c *cell.Cell) {
 	styleID, err := f.GetCellStyle(sheetName, cellCoord)
 	if err != nil {
@@ -245,7 +342,6 @@ func (h *ExcelFormatHandler) readCellFormatting(f *excelize.File, sheetName, cel
 		return
 	}
 
-	// Read font formatting
 	if style.Font != nil {
 		if style.Font.Bold {
 			c.SetFlag(cell.FlagBold)
@@ -259,43 +355,70 @@ func (h *ExcelFormatHandler) readCellFormatting(f *excelize.File, sheetName, cel
 		if style.Font.Underline != "" {
 			c.SetFlag(cell.FlagUnderline)
 		}
+
+		// Fixed color parsing
+		if style.Font.Color != "" {
+			if color, err := parseExcelColor(style.Font.Color); err == nil {
+				c.Color = color
+			}
+		}
 	}
 
-	// Read alignment
 	if style.Alignment != nil {
 		switch style.Alignment.Horizontal {
 		case "left":
-			c.Align = 1 // tview.AlignLeft
+			c.Align = 1
 		case "center":
-			c.Align = 2 // tview.AlignCenter
+			c.Align = 2
 		case "right":
-			c.Align = 3 // tview.AlignRight
+			c.Align = 3
+		}
+	}
+
+	if len(style.Fill.Color) > 0 && style.Fill.Color[0] != "" {
+		if color, err := parseExcelColor(style.Fill.Color[0]); err == nil {
+			c.BgColor = color
 		}
 	}
 }
 
-// writeCellFormatting writes formatting to Excel cell
+// writeCellFormatting writes formatting to Excel cell INCLUDING COLORS
 func (h *ExcelFormatHandler) writeCellFormatting(f *excelize.File, sheetName, cellCoord string, c *cell.Cell) {
 	style := &excelize.Style{
-		Font: &excelize.Font{
-			Bold:      c.HasFlag(cell.FlagBold),
-			Italic:    c.HasFlag(cell.FlagItalic),
-			Strike:    c.HasFlag(cell.FlagStrikethrough),
-		},
+		Font:      &excelize.Font{},
 		Alignment: &excelize.Alignment{},
 	}
+
+	// Font styling
+	style.Font.Bold = c.HasFlag(cell.FlagBold)
+	style.Font.Italic = c.HasFlag(cell.FlagItalic)
+	style.Font.Strike = c.HasFlag(cell.FlagStrikethrough)
 
 	if c.HasFlag(cell.FlagUnderline) {
 		style.Font.Underline = "single"
 	}
 
-	// Set alignment
+	// Font color - only set if not default white
+	if !c.Color.IsDefaultWhite() {
+		style.Font.Color = strings.TrimPrefix(c.Color.Hex(), "#")
+	}
+
+	// Background color - only set if not default black
+	if !c.BgColor.IsDefaultBlack() {
+		style.Fill = excelize.Fill{
+			Type:    "pattern",
+			Pattern: 1,
+			Color:   []string{strings.TrimPrefix(c.BgColor.Hex(), "#")},
+		}
+	}
+
+	// Alignment
 	switch c.Align {
-	case 1: // tview.AlignLeft
+	case 1:
 		style.Alignment.Horizontal = "left"
-	case 2: // tview.AlignCenter
+	case 2:
 		style.Alignment.Horizontal = "center"
-	case 3: // tview.AlignRight
+	case 3:
 		style.Alignment.Horizontal = "right"
 	}
 
@@ -307,13 +430,28 @@ func (h *ExcelFormatHandler) writeCellFormatting(f *excelize.File, sheetName, ce
 	f.SetCellStyle(sheetName, cellCoord, cellCoord, styleID)
 }
 
-// convertFormulaToExcel converts GoSheet formula syntax to Excel syntax
-func (h *ExcelFormatHandler) convertFormulaToExcel(formula string) string {
-	// Basic conversions - you may need to expand this based on your function set
-	// GoSheet uses similar syntax to Excel, so most formulas should work as-is
+// parseExcelColor converts Excel color format to ColorRGB
+func parseExcelColor(excelColor string) (utils.ColorRGB, error) {
+	excelColor = strings.TrimSpace(excelColor)
+	excelColor = strings.ToUpper(excelColor)
 	
-	// Handle any GoSheet-specific functions that don't exist in Excel
-	formula = strings.ReplaceAll(formula, "AVG(", "AVERAGE(")
+	if len(excelColor) == 8 {
+		excelColor = excelColor[2:]
+	}
 	
-	return formula
+	if len(excelColor) == 6 {
+		r, err1 := strconv.ParseUint(excelColor[0:2], 16, 8)
+		g, err2 := strconv.ParseUint(excelColor[2:4], 16, 8)
+		b, err3 := strconv.ParseUint(excelColor[4:6], 16, 8)
+		
+		if err1 == nil && err2 == nil && err3 == nil {
+			return utils.ColorRGB{uint8(r), uint8(g), uint8(b)}, nil
+		}
+	}
+	
+	if color, ok := utils.ColorOptions[excelColor]; ok {
+		return color, nil
+	}
+	
+	return utils.ColorRGB{255, 255, 255}, fmt.Errorf("invalid color format: %s", excelColor)
 }

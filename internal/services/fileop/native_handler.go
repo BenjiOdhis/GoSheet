@@ -38,7 +38,6 @@ func (h *NativeFormatHandler) Read(filename string) (*WorkbookResult, error) {
 	var reader io.Reader = file
 	isGSheet := strings.HasSuffix(filename, ".gsheet")
 	
-	// Decompress if .gsheet
 	if isGSheet {
 		gz, err := gzip.NewReader(file)
 		if err != nil {
@@ -48,19 +47,16 @@ func (h *NativeFormatHandler) Read(filename string) (*WorkbookResult, error) {
 		reader = gz
 	}
 
-	// Decode JSON
 	var wbData WorkbookData
 	if err := json.NewDecoder(reader).Decode(&wbData); err != nil {
 		return nil, fmt.Errorf("failed to decode: %v", err)
 	}
 
-	// Check for legacy format (v1.0 - single sheet without version)
 	if wbData.Version == "" && len(wbData.Sheets) == 0 {
 		file.Close()
 		return h.readLegacyFormat(filename)
 	}
 
-	// Convert to WorkbookResult
 	result := &WorkbookResult{
 		Sheets:      make([]SheetResult, 0, len(wbData.Sheets)),
 		ActiveSheet: wbData.ActiveSheet,
@@ -84,7 +80,6 @@ func (h *NativeFormatHandler) Read(filename string) (*WorkbookResult, error) {
 func (h *NativeFormatHandler) Write(filename string, sheets []SheetInfo, activeSheet int) error {
 	isGSheet := strings.HasSuffix(filename, ".gsheet")
 	
-	// Build workbook data
 	wbData := WorkbookData{
 		Version:     utils.FILEVER,
 		ActiveSheet: activeSheet,
@@ -112,20 +107,17 @@ func (h *NativeFormatHandler) Write(filename string, sheets []SheetInfo, activeS
 		wbData.Sheets = append(wbData.Sheets, sheetData)
 	}
 
-	// Create file
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	// Marshal to JSON
 	jsonBytes, err := json.MarshalIndent(wbData, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	// Compress if .gsheet
 	if isGSheet {
 		gz := gzip.NewWriter(f)
 		defer gz.Close()
@@ -134,7 +126,6 @@ func (h *NativeFormatHandler) Write(filename string, sheets []SheetInfo, activeS
 		return err
 	}
 
-	// Write uncompressed JSON
 	_, err = f.Write(jsonBytes)
 	return err
 }
@@ -146,7 +137,6 @@ func (h *NativeFormatHandler) processCellData(cellDataMap map[string]*CellData) 
 	for _, c := range cellDataMap {
 		c.Cell.RawValue = &c.RawValue
 
-		// Initialize nil fields with defaults
 		if c.Cell.Display == nil {
 			displayValue := c.RawValue
 			c.Cell.Display = &displayValue
@@ -204,7 +194,6 @@ func (h *NativeFormatHandler) readLegacyFormat(filename string) (*WorkbookResult
 		reader = gz
 	}
 
-	// Try to read as legacy single-sheet format
 	var legacyData struct {
 		Rows  int32                `json:"rows"`
 		Cols  int32                `json:"cols"`

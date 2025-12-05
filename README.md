@@ -28,7 +28,7 @@ GoSheet is a feature-rich, lightweight spreadsheet application that runs entirel
 - **🔧 Powerful Formulas**: 104+ built-in functions for complex calculations
 - **📊 Multiple Sheets**: Full workbook support with unlimited sheets
 - **🎨 Rich Formatting**: Colors, alignment, text effects, and more
-- **💾 Multiple Formats**: Native `.gsheet`, JSON, CSV, HTML, and TXT support
+- **💾 Multiple Formats: Native .gsheet, JSON, Excel (.xlsx), CSV, HTML, and TXT support
 - **⚡ Excel-Like Features**: Data validation, sorting, find/replace, and autofill
 
 ---
@@ -57,6 +57,7 @@ GoSheet is a feature-rich, lightweight spreadsheet application that runs entirel
 - **💰 Financial Formatting**: Currency symbols with full formatting control
 - **📅 Date/Time Support**: Multiple format options with auto-detection
 - **🚀 Viewport Optimization**: Renders only visible cells for maximum performance
+- **📦 Excel Import/Export**: Full .xlsx support with formulas, formatting, and colors
 
 ---
 
@@ -280,41 +281,63 @@ Cell D1: $=AVG(A1:A3, C1:C3)  → Result: 17.5
 |--------|-----------|------|-------|-------------|
 | **GSheet** | `.gsheet` | ✅ | ✅ | Native format (gzipped JSON) |
 | **JSON** | `.json` | ✅ | ✅ | Human-readable JSON |
+| **Excel** | `.xlsx` | ✅ | ✅ | Microsoft Excel format |
 | **CSV** | `.csv` | ❌ | ✅ | Comma-separated values |
 | **TXT** | `.txt` | ✅ | ✅ | Tab-delimited text |
 | **HTML** | `.html` | ❌ | ✅ | Styled HTML table |
 
-### Format Details
+### Excel Support Notes
+**GoSheet provides comprehensive Excel import/export capabilities with the following features:**
 
-#### .gsheet (Recommended)
-- Native binary format (gzip-compressed JSON)
-- Preserves all formatting, formulas, and metadata
-- Smallest file size
-- Best performance
+**Import Features:**
+- ✅ Multiple sheets with names preserved
+- ✅ Cell values and formulas (auto-evaluated on load)
+- ✅ Text formatting: bold, italic, underline, strikethrough
+- ✅ Font colors (RGB/hex)
+- ✅ Background colors (including empty cells with formatting)
+- ✅ Text alignment (left, center, right)
+- ✅ Cell comments and notes
+- ✅ Number formats with decimal places
+- ✅ Column widths
+-  ⚠️Complex Excel-specific formulas may need adjustment
+- ❌ Charts, images, pivot tables, macros not supported
 
-#### .json
-- Human-readable JSON format
-- Preserves all features
-- Larger file size than .gsheet
-- Good for version control
+**Export Features:**
+- ✅ All sheets with original names
+- ✅ Formulas (converted to Excel format)
+- ✅ All cell formatting preserved
+- ✅ Font and background colors
+- ✅ Comments and notes
+- ✅ Number formatting
+- ✅ Column widths
+- ✅ Text alignment
 
-#### .csv
-- Export only
-- Preserves data values only
-- No formatting or formulas
-- Universal compatibility
+**Known Excel Compatibility Notes**
+- The @ Symbol Issue
+When opening GoSheet-exported Excel files in newer versions of Excel (2019/365), you may see an @ symbol automatically inserted before some formulas:
+```excel
+# Original formula in GoSheet
+$=SUM(A1:A10)
 
-#### .txt
-- Tab-delimited plain text
-- Import/export support
-- Preserves basic data structure
-- No formatting
+# How Excel 2019+ may display it
+=@SUM(A1:A10)
+```
+This is normal Excel behavior, not a bug in GoSheet. The @ is Excel's "implicit intersection operator" and doesn't affect functionality. Excel adds it automatically when loading the file. Users can manually remove it if desired, but it's not necessary.
 
-#### .html
-- Export only
-- Styled HTML table with formatting
-- Formula cells marked with special styling
-- Ready for web publishing
+**Formula Conversion**
+
+- Most common functions work identically (SUM, AVG, IF, MAX, MIN, COUNT, etc.)
+- GoSheet formulas use **$=** prefix; this is automatically stripped for Excel export
+- Some advanced GoSheet-specific functions may not have Excel equivalents
+- Cell ranges (A1:A10) are fully compatible
+
+**Tips for Best Compatibility**
+
+- Use standard functions: Stick to common functions like SUM, AVG, IF, MAX, MIN for maximum compatibility
+- Test formulas: Always verify complex formulas work in Excel after export
+- Colors: **RGB colors** are fully supported and preserved
+- Formatting: **Bold**, *italic*, <ins>underline</ins>, and alignment are 100% compatible
+- Save as **.gsheet**: Use **native format** for full feature preservation
 
 ---
 
@@ -391,60 +414,86 @@ CONTAINS(THIS, "@") && CONTAINS(THIS, ".")
 gosheet/
 ├── internal/
 │   ├── services/
-│   │   ├── cell/               # Cell data structures
-│   │   ├── fileop/             # File I/O operations
-│   │   ├── table/              # Table management
-│   │   └── ui/                 # User interface
-│   │       ├── cell/              # Cell UI
-│   │       ├── datavalidation/    # Data Validation logic and dialogs
-│   │       ├── file/              # Start Menu, file open/save dialogs
-│   │       ├── navigation/        # Find, Replace dialogs
-│   │       └── sheetmanager/      # Sheet Manager UI
-│   └── utils/                  # Utility functions
-│       └── evaluatefuncs          # Excel-like custom functions
+│   │   ├── cell/              # Cell data structures and operations
+│   │   ├── fileop/            # File I/O operations and format handlers
+│   │   ├── table/             # Table management, sheets, forumula engine and viewport
+│   │   └── ui/                # User interface components
+│   │       ├── cell/              # Cell editing and formatting UI
+│   │       ├── datavalidation/    # Validation rules and dialogs
+│   │       ├── file/              # File browser and start menu
+│   │       ├── navigation/        # Find, replace, and go-to dialogs
+│   │       └── sheetmanager/      # Sheet management UI
+│   └── utils/                 # Utility functions
+│       └── evaluatefuncs/         # Formula evaluation functions
+├── demo_imgs/                 # Demo screenshots and GIFs
 ├── go.mod
 ├── go.sum
 ├── LICENSE.md
+├── README.md
 └── main.go
 ```
 
 ### Key Components
 
 - **Cell Service**: Manages individual cell data, formatting, and formulas
-- **File Service**: Handles reading/writing multiple file formats
-- **Table Service**: Viewport management, sheet operations, history
-- **UI Service**: All user interface dialogs and interactions
-- **Formula Engine**: Expression evaluation with 104 functions
+- **File Service**: Format-agnostic file operations with pluggable handlers (.gsheet, .xlsx, .json, etc.)
+- **Table Service**: Viewport management, sheet operations, undo/redo, and memory optimization
+- **UI Service**: Dialogs, menus, and user interactions
+- **Formula Engine**: Expression evaluation engine with 104 built-in functions and circular dependency detection
+- **Utils**: Helper functions for colors, date/time, formatting, and column naming
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how you can help:
+**Contributions are welcome! Here's how you can help make GoSheet better:**
+
+### Ways to Contribute
+
+- **🐛 Report bugs and issues**
+- 💡 Suggest new features
+- 📖 Improve documentation
+- **🔧 Submit bug fixes**
+- ✨ Add new features
+- 🧪 Write tests
 
 ### Reporting Issues
+**When reporting issues, please include:**
 
-1. Check existing issues first
-2. Include GoSheet version (obtainable from the start menu)
-3. Provide steps to reproduce
-4. Include terminal info (OS, terminal emulator)
+- GoSheet version (visible in start menu)
+- Operating system and terminal emulator
+- Steps to reproduce the issue
+- Expected vs actual behavior
+- Screenshots if applicable
 
 ### Pull Requests
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Test thoroughly
-5. Commit with clear messages
-6. Push to your fork
-7. Open a Pull Request
+2. Create a feature branch: git checkout -b feature/amazing-feature
+3. Make your changes with clear, atomic commits
+4. Add tests for new functionality
+5. Update documentation (README, code comments)
+6. Ensure code follows Go conventions
+7. Test thoroughly on your platform
+8. Push to your fork: git push origin feature/amazing-feature
+9. Open a Pull Request with clear description
 
 ### Development Guidelines
 
-- Follow Go conventions and style
-- Add tests for new features
-- Update documentation
-- Keep commits atomic and well-described
+- Code Style: Follow standard Go formatting (gofmt, golint)
+- Comments: Add clear comments for complex logic
+- Testing: Include unit tests for new functions
+- Documentation: Update README for user-facing changes
+- Commits: Write descriptive commit messages
+
+### Areas for Contribution
+**Some areas where contributions would be especially valuable:**
+
+- 📊 Chart and graphing support
+- 🎨 Conditional formatting
+- 📈 Pivot table functionality
+- 🔌 Plugin system architecture
+- 📄 Additional export formats (PDF, ODS)
 
 ---
 
@@ -481,26 +530,31 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 - [tview](https://github.com/rivo/tview) - Terminal UI framework
 - [tcell](https://github.com/gdamore/tcell) - Terminal handling
 - [expr](https://github.com/expr-lang/expr) - Expression evaluation
+- [excelize](https://github.com/xuri/excelize) - Excel file format library
 - [golang.org/x/term](https://golang.org/x/term) - Terminal utilities
 - [golang.org/x/text](https://golang.org/x/text) - Text processing
 
 ### Inspiration
 
 GoSheet was inspired by:
-- VisiCalc and Lotus 1-2-3 (pioneering spreadsheet software)
-- sc (terminal spreadsheet)
-- Modern spreadsheet applications (Excel, LibreOffice Calc)
+- VisiCalc (1979) - The original spreadsheet program
+- Lotus 1-2-3 (1983) - Revolutionary spreadsheet software
+- sc - Classic terminal spreadsheet calculator and its succesor sc-im
+- Microsoft Excel - Modern spreadsheet features and UX
+- LibreOffice Calc - Open-source spreadsheet alternative
+- Google Sheets - Cloud-based collaboration features
 
 ---
 
 ## 📊 Project Stats
 
-- **Lines of Code**: ~15,000
+- **Lines of Code**: ~15,000+
 - **Functions**: 104 built-in
-- **File Formats**: 5 supported
+- **File Formats**: 6 supported
 - **Go Version**: 1.24.2
 - **Started**: October 2025
 - **Status**: Active Development
+- **License**: MIT
 
 ---
 

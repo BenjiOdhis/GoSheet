@@ -63,7 +63,7 @@ func (f FileFormat) Description() string {
 	}
 }
 
-// SupportsRead returns whether format supports reading
+// SupportsRead checks whether format supports reading
 func (f FileFormat) SupportsRead() bool {
 	switch f {
 	case FormatGSheet, FormatJSON, FormatTXT, FormatXLSX:
@@ -73,12 +73,12 @@ func (f FileFormat) SupportsRead() bool {
 	}
 }
 
-// SupportsWrite returns whether format supports writing
+// SupportsWrite checks whether format supports writing, but all do
 func (f FileFormat) SupportsWrite() bool {
-	return true // All formats support writing
+	return true
 }
 
-// PreservesFormatting returns whether format preserves cell formatting
+// PreservesFormatting checks whether format preserves cell formatting
 func (f FileFormat) PreservesFormatting() bool {
 	switch f {
 	case FormatGSheet, FormatJSON, FormatHTML, FormatXLSX:
@@ -88,7 +88,7 @@ func (f FileFormat) PreservesFormatting() bool {
 	}
 }
 
-// PreservesFormulas returns whether format preserves formulas
+// PreservesFormulas checks whether format preserves formulas
 func (f FileFormat) PreservesFormulas() bool {
 	switch f {
 	case FormatGSheet, FormatJSON, FormatXLSX:
@@ -98,7 +98,7 @@ func (f FileFormat) PreservesFormulas() bool {
 	}
 }
 
-// SupportsMultipleSheets returns whether format supports multiple sheets
+// SupportsMultipleSheets checks whether format supports multiple sheets
 func (f FileFormat) SupportsMultipleSheets() bool {
 	switch f {
 	case FormatGSheet, FormatJSON, FormatXLSX:

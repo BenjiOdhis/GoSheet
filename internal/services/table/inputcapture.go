@@ -306,7 +306,7 @@ func InputCaptureService(app *tview.Application, table *tview.Table, vp *utils.V
 			ui.ShowHelpModal(app, table)
 			return nil
 
-		// ESCAPE - Show Save Dialog
+		// ESCAPE / Alt + S - Show Save Dialog
 		case event.Key() == tcell.KeyEscape || ((event.Rune() == 's' || event.Rune() == 'S') && event.Modifiers()&tcell.ModAlt != 0):
 			file.ShowUnifiedFileDialog(app, table, "save", activeData, table, SetCurrentFilename, MarkAsSaved, HasUnsavedChanges, GetCurrentFilename())
 			return nil

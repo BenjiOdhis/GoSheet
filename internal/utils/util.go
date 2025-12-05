@@ -14,12 +14,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
 	"golang.org/x/term"
 )
 
 var (
-	VER = "2.6.2"
+	VER = "2.8.4"
 	FILEVER = "2.0"
 
 	DEFAULT_SHEET_NAME = "Sheet1"
@@ -131,31 +130,7 @@ var TOBEPRINTED []string
 
 var TypeOptions = []string{"String", "Number", "Financial", "DateTime"} // Data types
 var AlignOptions = []string{"Left", "Center", "Right"} // Alignment options
-var ColorOptionNames = []string {"White", "Black", "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Pink", "Gray", "Custom..."}
-var ColorOptions = map[string]ColorRGB{
-	"White": {255, 255, 255},
-	"Black": {0, 0, 0},
-	"Red": {255, 0, 0},
-	"Green": {0, 255, 0},
-	"Blue": {0, 0, 255},
-	"Yellow": {255, 255, 0},
-	"Orange": {255, 165, 0},
-	"Purple": {128, 0, 128},
-	"Pink": {255, 192, 203},
-	"Gray": {128, 128, 128},
-}
-var DateTimeFormats = []string{"auto", "date", "time", "datetime"}
-
-
-// Turns custom color to tcell type
-func (c ColorRGB) ToTCellColor() tcell.Color {
-	return tcell.NewRGBColor(int32(c[0]), int32(c[1]), int32(c[2]))
-}
-
-// Returns the color as HEX
-func (c ColorRGB) Hex() string {
-    return fmt.Sprintf("#%02X%02X%02X", c[0], c[1], c[2])
-}
+var DateTimeFormats = []string{"auto", "date", "time", "datetime"} // Date formats
 
 // Format path to look better
 func PrettyPath(full string, mode string) string {
