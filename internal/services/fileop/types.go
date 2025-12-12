@@ -21,6 +21,7 @@ const (
 	FormatTXT
 	FormatHTML
 	FormatXLSX
+	FormatPDF
 )
 
 // String returns the file extension for the format
@@ -38,6 +39,8 @@ func (f FileFormat) String() string {
 		return ".html"
 	case FormatXLSX:
 		return ".xlsx"
+	case FormatPDF:
+		return ".pdf"
 	default:
 		return ""
 	}
@@ -58,6 +61,8 @@ func (f FileFormat) Description() string {
 		return "HTML Table"
 	case FormatXLSX:
 		return "Excel Spreadsheet"
+	case FormatPDF:
+		return "PDF Document"
 	default:
 		return "Unknown Format"
 	}
@@ -81,7 +86,7 @@ func (f FileFormat) SupportsWrite() bool {
 // PreservesFormatting checks whether format preserves cell formatting
 func (f FileFormat) PreservesFormatting() bool {
 	switch f {
-	case FormatGSheet, FormatJSON, FormatHTML, FormatXLSX:
+	case FormatGSheet, FormatJSON, FormatHTML, FormatXLSX, FormatPDF:
 		return true
 	default:
 		return false
@@ -117,6 +122,7 @@ func DetectFormat(filename string) (FileFormat, bool) {
 		FormatTXT,
 		FormatHTML,
 		FormatXLSX,
+		FormatPDF,
 	}
 	
 	for _, format := range formats {
@@ -195,6 +201,7 @@ func GetAllFormats() []FileFormat {
 		FormatTXT,
 		FormatHTML,
 		FormatXLSX,
+		FormatPDF,
 	}
 }
 

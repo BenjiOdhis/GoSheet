@@ -28,7 +28,7 @@ GoSheet is a feature-rich, lightweight spreadsheet application that runs entirel
 - **🔧 Powerful Formulas**: 104+ built-in functions for complex calculations
 - **📊 Multiple Sheets**: Full workbook support with unlimited sheets
 - **🎨 Rich Formatting**: Colors, alignment, text effects, and more
-- **💾 Multiple Formats**: Native .gsheet, JSON, Excel (.xlsx), CSV, HTML, and TXT support
+- **💾 Multiple Formats**: Native .gsheet, JSON, Excel (.xlsx), PDF, CSV, HTML, and TXT support
 - **⚡ Excel-Like Features**: Data validation, sorting, find/replace, and autofill
 
 ---
@@ -283,6 +283,7 @@ Cell D1: $=AVG(A1:A3, C1:C3)  → Result: 17.5
 | **JSON** | `.json` | ✅ | ✅ | Human-readable JSON |
 | **Excel** | `.xlsx` | ✅ | ✅ | Microsoft Excel format |
 | **CSV** | `.csv` | ❌ | ✅ | Comma-separated values |
+| **PDF** | `.pdf` | ❌ | ✅ | Portable Document Format |
 | **TXT** | `.txt` | ✅ | ✅ | Tab-delimited text |
 | **HTML** | `.html` | ❌ | ✅ | Styled HTML table |
 
@@ -493,7 +494,6 @@ gosheet/
 - 🎨 Conditional formatting
 - 📈 Pivot table functionality
 - 🔌 Plugin system architecture
-- 📄 Additional export formats (PDF, ODS)
 
 ---
 
@@ -566,7 +566,7 @@ GoSheet was inspired by:
 - [ ] Pivot tables
 - [ ] Macro recording
 - [ ] Plugin system
-- [ ] More export formats (PDF, ODS)
+- [x] More export formats (PDF)
 - [ ] Autobackup (auto save file to %APPDATA%/.gsheet)
 - [ ] Templates
 - [ ] Printing

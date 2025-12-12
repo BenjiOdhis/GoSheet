@@ -107,12 +107,10 @@ func OpenTable(app *tview.Application, filename string) *tview.Table {
 		globalWorkbook.Sheets = append(globalWorkbook.Sheets, newSheet)
 	}
 
-	// Ensure we have at least one sheet
 	if len(globalWorkbook.Sheets) == 0 {
 		globalWorkbook.Sheets = append(globalWorkbook.Sheets, NewSheet("Sheet1"))
 	}
 
-	// Set active sheet
 	if workbookResult.ActiveSheet >= len(globalWorkbook.Sheets) {
 		globalWorkbook.ActiveSheet = 0
 	} else {

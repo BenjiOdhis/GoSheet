@@ -42,6 +42,9 @@ func NewFileManager() *FileManager {
 	excelHandler := &ExcelFormatHandler{}
 	fm.RegisterReader(FormatXLSX, excelHandler)
 	fm.RegisterWriter(FormatXLSX, excelHandler)
+
+	pdfHandler := &PDFFormatHandler{}
+	fm.RegisterWriter(FormatPDF, pdfHandler)
 	
 	return fm
 }
