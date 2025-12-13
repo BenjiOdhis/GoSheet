@@ -571,7 +571,7 @@ GoSheet was inspired by:
 - [x] More export formats (PDF)
 - [ ] Autobackup (auto save file to %APPDATA%/.gsheet)
 - [ ] Templates
-- [ ] Printing
+- [x] Printing - Note: There is no built-in print dialog. You can export the sheet as a pdf and print it using the native command/dialog of your operating system
 - [ ] Data protection
 - [x] Multi-sheet workbooks
 - [x] Data validation
